@@ -71,6 +71,7 @@ body {
 .num { font-variant-numeric: tabular-nums; }
 a { color: var(--accent); }
 .wrap { max-width: 960px; margin: 0 auto; padding: 28px 16px 56px; }
+[hidden] { display: none !important; }
 
 /* ---------- header ---------- */
 header { margin-bottom: 20px; }
@@ -91,6 +92,14 @@ h2 { font-size: 18px; margin: 0 0 14px; }
 
 /* ---------- calculator ---------- */
 .calc { margin-bottom: 18px; }
+.calc-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; margin-bottom: 14px; }
+.calc-head h2 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; padding: 3px; background: var(--surface-2); }
+.seg button {
+  border: 0; background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 600;
+  padding: 5px 14px; border-radius: 999px; cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
 .amount-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .amount-field {
   display: flex; align-items: center; gap: 8px;
@@ -111,6 +120,18 @@ h2 { font-size: 18px; margin: 0 0 14px; }
 .chip:hover { border-color: var(--accent); }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 
+details.bills { margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; }
+details.bills summary { cursor: pointer; font-size: 14px; font-weight: 600; }
+details.bills summary small { font-weight: 400; color: var(--muted); margin-left: 6px; }
+.bill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; margin: 10px 0 4px; }
+.bill { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.bill span { min-width: 52px; color: var(--muted); font-weight: 600; }
+.bill input {
+  width: 64px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text);
+  font: inherit; padding: 4px 8px;
+}
+.bill input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+
 .best {
   margin: 18px 0 6px; padding: 16px 18px; border-radius: 14px;
   background: var(--accent-soft); display: grid; gap: 2px;
@@ -130,6 +151,7 @@ h2 { font-size: 18px; margin: 0 0 14px; }
 .rank .who { min-width: 0; }
 .rank .who b { font-weight: 600; }
 .rank .who small { display: block; color: var(--muted); font-size: 13px; }
+.rank .who small.warn-text { color: var(--warn); }
 .rank .amt { text-align: right; font-weight: 700; white-space: nowrap; }
 .rank .amt small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
 .rank.na { opacity: .6; }
@@ -150,12 +172,53 @@ h2 { font-size: 18px; margin: 0 0 14px; }
 .rates dt { color: var(--muted); font-size: 14px; }
 .rates dt small { display: block; font-size: 12px; line-height: 1.3; }
 .rates dd { margin: 0; font-size: 20px; font-weight: 700; }
+details.tiers { font-size: 13px; color: var(--muted); }
+details.tiers summary { cursor: pointer; }
+details.tiers table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+details.tiers td { padding: 2px 0; }
+details.tiers td:last-child { text-align: right; color: var(--text); font-weight: 600; }
 .card-foot { margin-top: auto; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
 .status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
 .status.warn { background: var(--warn-bg); color: var(--warn); }
 .status.bad { background: var(--bad-bg); color: var(--bad); }
 details.err { font-size: 12px; color: var(--muted); }
 details.err summary { cursor: pointer; }
+
+/* ---------- nearby ---------- */
+.nearby { margin-bottom: 18px; }
+.nearby .intro { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--accent); background: var(--accent);
+  color: var(--accent-text); border-radius: 10px; padding: 8px 14px; font: inherit; font-size: 15px; font-weight: 600;
+  cursor: pointer; text-decoration: none;
+}
+.btn:disabled { opacity: .6; cursor: progress; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.controls label { font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.controls select {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px;
+}
+.geo-status { margin: 12px 0 0; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
+.geo-status.warn { background: var(--warn-bg); color: var(--warn); }
+.geo-status.bad { background: var(--bad-bg); color: var(--bad); }
+.geo-status .btn { margin: 6px 6px 0 0; font-size: 14px; padding: 5px 12px; }
+.branches { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+.branch { border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
+.branch-head { display: flex; gap: 10px; align-items: center; }
+.branch-head > div { flex: 1; min-width: 0; }
+.branch-head b { display: block; line-height: 1.3; }
+.branch-head small { color: var(--muted); font-size: 13px; }
+.dist { text-align: right; font-weight: 700; white-space: nowrap; }
+.dist small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.branch-info { margin: 0; display: grid; gap: 4px; font-size: 14px; }
+.branch-info div { display: grid; grid-template-columns: 84px 1fr; gap: 8px; }
+.branch-info dt { color: var(--muted); }
+.branch-info dd { margin: 0; min-width: 0; }
+.branch-info .unknown { color: var(--warn); }
+.branch-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; }
+.branch-actions .btn { font-size: 14px; padding: 6px 12px; }
 
 /* ---------- misc ---------- */
 .banner { padding: 12px 16px; border-radius: 12px; background: var(--bad-bg); color: var(--bad); margin-bottom: 18px; }
@@ -171,6 +234,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   .panel { padding: 16px; }
   .best .value { font-size: 28px; }
   .amount-field input { font-size: 22px; }
+  .branch-info div { grid-template-columns: 72px 1fr; }
 }
 </style>
 </head>
@@ -187,41 +251,80 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
 
   <!-- ========= 換算 ========= -->
   <section class="panel calc" aria-labelledby="calc-title">
-    <h2 id="calc-title">我有多少台幣？</h2>
-    <div class="amount-row">
-      <label class="amount-field">
-        <span>NT$</span>
-        <input id="amount" class="num" type="number" inputmode="numeric" min="0" step="100" value="10000" aria-label="新臺幣金額">
-      </label>
-      <div class="chips" id="chips">
-        <button type="button" class="chip" data-v="5000">5,000</button>
-        <button type="button" class="chip" data-v="10000">1 萬</button>
-        <button type="button" class="chip" data-v="30000">3 萬</button>
-        <button type="button" class="chip" data-v="50000">5 萬</button>
+    <div class="calc-head">
+      <h2 id="calc-title">我有多少台幣？</h2>
+      <div class="seg" id="currency" role="group" aria-label="持有的貨幣">
+        <button type="button" data-cur="TWD" aria-pressed="true">台幣 TWD</button>
+        <button type="button" data-cur="USD" aria-pressed="false">美金 USD</button>
       </div>
     </div>
+    <div class="amount-row">
+      <label class="amount-field">
+        <span id="cur-symbol">NT$</span>
+        <input id="amount" class="num" type="number" inputmode="numeric" min="0" step="100" value="10000" aria-label="新臺幣金額">
+      </label>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <details class="bills" id="bills" hidden>
+      <summary>依鈔票面額輸入<small id="bills-summary"></small></summary>
+      <div class="bill-grid" id="bill-grid"></div>
+      <p class="note">小面額鈔票匯率較差。修改張數後上方金額會自動加總；直接修改金額則重新以最少張數拆算。</p>
+    </details>
 
     <div class="best" id="best" aria-live="polite">
-      <span class="label">最多可以換到</span>
+      <span class="label">預估最多可以換到</span>
       <span class="value num skeleton">฿ 00,000</span>
       <span class="how">&nbsp;</span>
     </div>
 
     <ol class="ranking" id="ranking"></ol>
-    <p class="note">「經台銀換美金」＝ 先在臺灣銀行用台幣買美金現鈔，到泰國再換泰銖。美金以大鈔（100 元）匯率計算，未計入台銀手續費與零頭。</p>
+    <p class="note" id="calc-note"></p>
   </section>
 
   <!-- ========= 各家匯率 ========= -->
   <h2>各家匯率</h2>
   <div class="cards" id="cards"></div>
 
+  <!-- ========= 附近兌換所 ========= -->
+  <section class="panel nearby" aria-labelledby="nearby-title">
+    <h2 id="nearby-title">附近兌換所</h2>
+    <p class="intro">按「使用目前位置」後，瀏覽器才會詢問是否分享位置。位置只在這個頁面中用來計算與分店的直線距離，不會上傳，也不會儲存；關閉或重新整理頁面就會忘記。</p>
+    <div class="controls">
+      <button type="button" class="btn" id="locate">📍 使用目前位置</button>
+      <button type="button" class="btn ghost" id="forget" hidden>清除位置</button>
+      <label>範圍
+        <select id="radius" disabled>
+          <option value="1">1 公里</option>
+          <option value="3" selected>3 公里</option>
+          <option value="5">5 公里</option>
+          <option value="10">10 公里</option>
+          <option value="all">不限</option>
+        </select>
+      </label>
+      <label>排序
+        <select id="sort">
+          <option value="distance" disabled>距離最近</option>
+          <option value="thb" selected>預估換得泰銖最多</option>
+        </select>
+      </label>
+      <label>地區
+        <select id="area"><option value="all">全部地區</option></select>
+      </label>
+    </div>
+    <p class="geo-status" id="geo-status" role="status" aria-live="polite">尚未定位。下方列出所有已收錄的分店。</p>
+    <ul class="branches" id="branches"></ul>
+    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。目前只收錄有匯率資料的地點；營業時間尚未查證，出發前請以 Google Maps 或店家公告為準。</p>
+  </section>
+
   <section class="panel info">
     <h2>說明</h2>
     <ul>
       <li><b>買價</b>是兌換所向你「買」外幣的價格，也就是 1 美金 / 1 台幣可以換到多少泰銖，數字越大越划算。</li>
-      <li>兌換所的匯率取最大面額（美金 100 元、台幣 1,000 元以上）。小面額鈔票匯率較差，以現場公告為準。</li>
+      <li>兌換所卡片上的美金匯率是最大面額；小面額鈔票匯率較差，可展開「美金各面額」查看。以現場公告為準。</li>
       <li>臺灣銀行顯示的是<b>本行現金賣出</b>：在台銀用台幣買 1 美金現鈔需要多少台幣。</li>
       <li>匯率由 GitHub Actions 每 30 分鐘自動抓取一次，僅供參考。某個來源暫時抓不到時，會沿用上一次的資料並標示。</li>
+      <li>所有換算結果都是<b>預估</b>，不是保證可兌換的金額。</li>
     </ul>
   </section>
 
@@ -231,12 +334,16 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     <a href="https://www.ttexchange.com/" target="_blank" rel="noopener">T.T. Exchange</a>、
     <a href="https://rate.bot.com.tw/xrt?Lang=zh-TW" target="_blank" rel="noopener">臺灣銀行</a>
     ・ <a href="data/rates.json">rates.json</a>
+    ・ <a href="data/exchange-shops.json">exchange-shops.json</a>
   </footer>
 </div>
 
+<script src="js/calc.js"></script>
 <script>
 (function () {
   'use strict';
+
+  var C = window.ThaiCalc;
 
   // 兌換所基本資料 (key 對應 rates.json 的 sources)
   var SHOPS = [
@@ -246,11 +353,39 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   ];
   var BOT = { key: 'bot', name: '臺灣銀行', place: '牌告匯率', logo: '台銀', map: 'https://maps.app.goo.gl/xXNYxiv6cNzA968F7' };
 
+  var CURRENCIES = {
+    TWD: {
+      title: '我有多少台幣？', symbol: 'NT$', label: '新臺幣金額', step: 100, def: '10000',
+      chips: [['5000', '5,000'], ['10000', '1 萬'], ['30000', '3 萬'], ['50000', '5 萬']],
+      note: '「直接換台幣」＝ 帶台幣現鈔到泰國換泰銖；兌換所只收 NT$100 以上紙鈔，未滿 NT$100 的零頭不計。' +
+        '「經台銀換美金」＝ 先在臺灣銀行用台幣買美金 100 元大鈔，到泰國換泰銖；買不滿一張 100 元的餘額，在同一家直接換台幣。' +
+        '台銀實際可領到哪些面額沒有可靠資料，因此只以 100 元大鈔估算，未計入台銀手續費。'
+    },
+    USD: {
+      title: '我有多少美金？', symbol: 'US$', label: '美金金額', step: 1, def: '300',
+      chips: [['100', '100'], ['300', '300'], ['500', '500'], ['1000', '1,000']],
+      note: '依每張鈔票的面額，分別套用各家公告的面額匯率計算（小面額匯率較差）。' +
+        '沒有指定張數時，以最少張數拆算（100、50、20、10、5、1 元）。美金硬幣兌換所不收；鈔票破損或版本較舊時，現場可能拒收或另計匯率。'
+    }
+  };
+
   var $ = function (id) { return document.getElementById(id); };
-  var data = null;
+  var data = null;       // rates.json
+  var branches = null;   // exchange-shops.json 的 branches
+  var state = {
+    currency: 'TWD',
+    amounts: { TWD: CURRENCIES.TWD.def, USD: CURRENCIES.USD.def },
+    usdCounts: C.splitUsdBills(Number(CURRENCIES.USD.def)),
+    usdCustom: false,      // 使用者自行輸入了鈔票張數
+    shopBest: {},          // 每家兌換所在目前輸入下的最佳預估 { thb, how }
+    // 定位：只存在記憶體，不寫入 localStorage / Cookie / URL
+    pos: null,             // { lat, lng, accuracy }
+    geo: 'idle',           // idle | locating | ok | denied | timeout | unsupported | insecure | unavailable
+    branchError: null
+  };
 
   var fmtTHB = function (n) { return '฿ ' + Math.round(n).toLocaleString('zh-TW'); };
-  var fmtUSD = function (n) { return 'US$ ' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var fmtInt = function (n) { return Math.round(n).toLocaleString('zh-TW'); };
   var fmtRate = function (n) { return n == null ? '—' : String(n); };
   var esc = function (s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -270,6 +405,11 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     return m ? m[1] + '/' + m[2] + ' ' + m[3] : (s || '—');
   };
   var hasRate = function (src) { return src && (src.ok || src.stale); };
+  var shopByKey = function (key) { return SHOPS.filter(function (s) { return s.key === key; })[0]; };
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 無痕模式等情況忽略 */ } }
+  };
 
   // ---------------------------------------------------------------- 卡片
   function statusHtml(src) {
@@ -284,6 +424,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   function errHtml(src) {
     return src && src.error ? '<details class="err"><summary>失敗原因</summary>' + esc(src.error) + '</details>' : '';
   }
+  function tiersHtml(src) {
+    var tiers = Array.isArray(src.usdTiers) ? src.usdTiers : [];
+    if (tiers.length < 2) return '';
+    return '<details class="tiers"><summary>美金各面額</summary><table>' +
+      tiers.map(function (t) {
+        return '<tr><td>面額 ' + esc(t.denom) + '</td><td class="num">' + esc(t.buy) + '</td></tr>';
+      }).join('') + '</table></details>';
+  }
 
   function renderCards() {
     var html = SHOPS.map(function (shop) {
@@ -296,6 +444,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
           '<div><dt>美金買價 <small>' + esc(ok && s.usdDenom ? '面額 ' + s.usdDenom : '') + '</small></dt><dd class="num">' + fmtRate(ok ? s.usdBuy : null) + '</dd></div>' +
           '<div><dt>台幣買價 <small>' + esc(ok && s.twdDenom ? '面額 ' + s.twdDenom : '') + '</small></dt><dd class="num">' + fmtRate(ok ? s.twdBuy : null) + '</dd></div>' +
         '</dl>' +
+        (ok ? tiersHtml(s) : '') +
         '<div class="card-foot"><span>更新 ' + esc(ok ? shortLocal(s.updatedAt) : '—') + '（泰國時間）</span><a href="' + shop.map + '" target="_blank" rel="noopener">地圖</a></div>' +
       '</article>';
     });
@@ -314,28 +463,102 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     $('cards').innerHTML = html.join('');
   }
 
-  // ---------------------------------------------------------------- 換算 & 排名
-  function calculate() {
-    var twd = Math.max(0, parseFloat($('amount').value) || 0);
+  // ---------------------------------------------------------------- 換算方案
+  // 每個方案：{ key, who, how, place, thb (null = 無法計算), detail, warn }
+
+  function twdOptions(twd) {
     var bot = data.sources[BOT.key];
     var usdSell = hasRate(bot) ? bot.usdCashSell : 0;
-    var usd = usdSell > 0 ? twd / usdSell : 0;
-
     var options = [];
     SHOPS.forEach(function (shop) {
       var s = data.sources[shop.key];
       var ok = hasRate(s);
+
+      var d = ok ? C.twdDirect(twd, s.twdBuy) : null;
       options.push({
-        who: shop.name, how: '直接換台幣', place: shop.place,
-        thb: ok ? twd * s.twdBuy : null,
-        detail: ok ? '1 台幣 = ' + s.twdBuy + ' 泰銖' : '暫無資料'
+        key: shop.key, who: shop.name, how: '直接換台幣', place: shop.place,
+        thb: d ? d.thb : null,
+        detail: d ? '1 台幣 = ' + s.twdBuy + ' 泰銖' + (d.twdLeft > 0 ? '・零頭 NT$' + fmtInt(d.twdLeft) + ' 不計' : '') : '暫無資料'
       });
+
+      var v = ok ? C.twdViaUsd(twd, usdSell, C.usdTiersOf(s), s.twdBuy) : { ok: false, reason: 'no-rate' };
+      var detail;
+      if (v.ok) {
+        detail = '台銀買 US$' + fmtInt(v.usd) + '（NT$' + fmtInt(v.twdSpent) + '）× ' + v.rate100;
+        if (v.twdRemainderExchanged > 0) detail += '＋剩 NT$' + fmtInt(v.twdRemainderExchanged) + ' 直接換';
+        if (v.twdLeft >= 1) detail += '・NT$' + fmtInt(v.twdLeft) + ' 未換';
+      } else if (v.reason === 'not-enough') {
+        detail = '金額不足 1 張 US$100（約需 NT$' + fmtInt(v.costPerBill) + '）';
+      } else if (v.reason === 'no-bot') {
+        detail = '臺灣銀行暫無資料';
+      } else {
+        detail = '暫無資料';
+      }
       options.push({
-        who: shop.name, how: '經台銀換美金', place: shop.place,
-        thb: ok && usdSell > 0 ? usd * s.usdBuy : null,
-        detail: ok && usdSell > 0 ? fmtUSD(usd) + ' × ' + s.usdBuy : '暫無資料'
+        key: shop.key, who: shop.name, how: '經台銀換美金', place: shop.place,
+        thb: v.ok ? v.thb : null, detail: detail
       });
     });
+    return options;
+  }
+
+  function usdOptions(counts) {
+    return SHOPS.map(function (shop) {
+      var s = data.sources[shop.key];
+      var ok = hasRate(s);
+      var r = ok ? C.usdBillsToThb(counts, C.usdTiersOf(s)) : null;
+      if (!r || r.usdCounted === 0) {
+        return { key: shop.key, who: shop.name, how: '直接換美金', place: shop.place, thb: null,
+          detail: ok ? '沒有對應面額的匯率資料' : '暫無資料' };
+      }
+      return {
+        key: shop.key, who: shop.name, how: '直接換美金', place: shop.place,
+        thb: r.thb,
+        detail: r.lines.map(function (l) { return '$' + l.bill + '×' + l.count + ' @' + l.rate; }).join('、'),
+        warn: r.usdMissing > 0
+          ? 'US$' + fmtInt(r.usdMissing) + '（' + r.missingBills.map(function (b) { return b + ' 元'; }).join('、') + '鈔）沒有面額匯率，未計入'
+          : null
+      };
+    });
+  }
+
+  var INPUT_MSG = {
+    empty: function (cur) { return cur === 'TWD' ? '請輸入台幣金額' : '請輸入美金金額'; },
+    zero: function (cur) { return cur === 'TWD' ? '請輸入台幣金額' : '請輸入美金金額'; },
+    nan: function () { return '請輸入數字'; },
+    negative: function () { return '金額不可為負數'; },
+    'too-large': function () { return '金額過大（上限 ' + fmtInt(C.MAX_AMOUNT) + '）'; }
+  };
+
+  function calculate() {
+    var cur = state.currency;
+    var raw = $('amount').value;
+    state.amounts[cur] = raw;
+    store.set(cur === 'TWD' ? 'thb-amount' : 'thb-amount-usd', raw);
+
+    var parsed = C.parseAmount(raw);
+    var options = [];
+    var message = null;
+
+    if (!parsed.ok) {
+      message = INPUT_MSG[parsed.error](cur);
+    } else if (cur === 'TWD') {
+      options = twdOptions(parsed.value);
+    } else {
+      var usd = Math.floor(parsed.value);
+      if (!state.usdCustom || C.sumBills(state.usdCounts) !== usd) {
+        state.usdCounts = C.splitUsdBills(usd);
+        state.usdCustom = false;
+        syncBillInputs();
+      }
+      renderBillsSummary();
+      if (usd < 1) {
+        message = '未滿 US$1 無法兌換（兌換所不收美金硬幣）';
+      } else {
+        options = usdOptions(state.usdCounts);
+        if (parsed.value !== usd) message = '美分零頭 US$' + (parsed.value - usd).toFixed(2) + ' 不計';
+      }
+    }
 
     var valid = options.filter(function (o) { return o.thb != null; });
     valid.sort(function (a, b) { return b.thb - a.thb; });
@@ -343,12 +566,13 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     var top = valid[0];
 
     var best = $('best');
-    if (top && twd > 0) {
+    if (top) {
       best.querySelector('.value').textContent = fmtTHB(top.thb);
-      best.querySelector('.how').innerHTML = '<b>' + esc(top.who) + '</b>・' + esc(top.how) + '（' + esc(top.place) + '）';
+      best.querySelector('.how').innerHTML = '<b>' + esc(top.who) + '</b>・' + esc(top.how) + '（' + esc(top.place) + '）' +
+        (message ? '<br><small>' + esc(message) + '</small>' : '');
     } else {
       best.querySelector('.value').textContent = '฿ 0';
-      best.querySelector('.how').textContent = twd > 0 ? '目前沒有可用的匯率' : '請輸入台幣金額';
+      best.querySelector('.how').textContent = message || '目前沒有可用的匯率';
     }
     best.querySelector('.value').classList.remove('skeleton');
 
@@ -356,18 +580,246 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
       var diff = i === 0 ? '最划算' : '少 ' + fmtTHB(top.thb - o.thb).replace('฿ ', '฿');
       return '<li class="rank' + (i === 0 ? ' top' : '') + '">' +
         '<span class="pos num">' + (i + 1) + '</span>' +
-        '<span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) + '<small class="num">' + esc(o.detail) + '</small></span>' +
+        '<span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) + '<small class="num">' + esc(o.detail) + '</small>' +
+          (o.warn ? '<small class="warn-text">⚠ ' + esc(o.warn) + '</small>' : '') + '</span>' +
         '<span class="amt num">' + fmtTHB(o.thb) + '<small>' + diff + '</small></span>' +
       '</li>';
     }).concat(na.map(function (o) {
-      return '<li class="rank na"><span class="pos">–</span><span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) + '<small>暫無資料</small></span><span class="amt">—</span></li>';
+      return '<li class="rank na"><span class="pos">–</span><span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) +
+        '<small>' + esc(o.detail) + '</small></span><span class="amt">—</span></li>';
     })).join('');
+
+    // 每家兌換所的最佳方案，給附近分店使用
+    state.shopBest = {};
+    valid.forEach(function (o) {
+      if (!state.shopBest[o.key]) state.shopBest[o.key] = { thb: o.thb, how: o.how };
+    });
 
     // 快速金額按鈕的選取狀態
     Array.prototype.forEach.call($('chips').children, function (btn) {
-      btn.setAttribute('aria-pressed', String(Number(btn.dataset.v) === twd));
+      btn.setAttribute('aria-pressed', String(parsed.ok && Number(btn.dataset.v) === parsed.value));
     });
-    try { localStorage.setItem('thb-amount', String(twd)); } catch (e) { /* 無痕模式等情況忽略 */ }
+
+    renderNearby();
+  }
+
+  // ---------------------------------------------------------------- 貨幣切換 & 鈔票張數
+  function buildBillInputs() {
+    $('bill-grid').innerHTML = C.USD_BILLS.map(function (bill) {
+      return '<label class="bill"><span>US$' + bill + '</span>' +
+        '<input class="num" type="number" inputmode="numeric" min="0" step="1" data-bill="' + bill + '" aria-label="' + bill + ' 元鈔張數"> 張</label>';
+    }).join('');
+  }
+  function syncBillInputs() {
+    Array.prototype.forEach.call($('bill-grid').querySelectorAll('input'), function (input) {
+      input.value = String(state.usdCounts[input.dataset.bill] || 0);
+    });
+  }
+  function renderBillsSummary() {
+    var parts = C.USD_BILLS.filter(function (b) { return state.usdCounts[b] > 0; })
+      .map(function (b) { return '$' + b + '×' + state.usdCounts[b]; });
+    $('bills-summary').textContent = parts.length
+      ? '（' + (state.usdCustom ? '自訂' : '自動拆算') + '：' + parts.join('、') + '）'
+      : '';
+  }
+
+  function setCurrency(cur) {
+    var cfg = CURRENCIES[cur];
+    state.currency = cur;
+    store.set('thb-currency', cur);
+    Array.prototype.forEach.call($('currency').children, function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.cur === cur));
+    });
+    $('calc-title').textContent = cfg.title;
+    $('cur-symbol').textContent = cfg.symbol;
+    var input = $('amount');
+    input.step = String(cfg.step);
+    input.setAttribute('aria-label', cfg.label);
+    input.value = state.amounts[cur];
+    $('chips').innerHTML = cfg.chips.map(function (c) {
+      return '<button type="button" class="chip" data-v="' + c[0] + '">' + c[1] + '</button>';
+    }).join('');
+    $('bills').hidden = cur !== 'USD';
+    $('calc-note').textContent = cfg.note;
+    if (data) calculate();
+  }
+
+  // ---------------------------------------------------------------- 附近分店
+  function fmtDist(km) {
+    if (km < 1) return '直線 ' + Math.max(10, Math.round(km * 1000 / 10) * 10) + ' 公尺';
+    return '直線 ' + (km < 100 ? km.toFixed(1) : String(Math.round(km))) + ' 公里';
+  }
+
+  function setGeoStatus(html, tone) {
+    var el = $('geo-status');
+    el.className = 'geo-status' + (tone ? ' ' + tone : '');
+    el.innerHTML = html;
+  }
+
+  var GEO_MSG = {
+    locating: ['定位中…請在瀏覽器的提示中選擇是否允許。', ''],
+    denied: ['你沒有允許分享位置，無法計算距離。上方的匯率比較仍可正常使用，也可以用「地區」篩選分店。若之後想使用定位，請先在瀏覽器網址列的網站設定中允許位置權限，再按「使用目前位置」。', 'warn'],
+    timeout: ['定位逾時，可能是訊號不佳。可以稍後再按一次「使用目前位置」，或用「地區」篩選分店。', 'warn'],
+    unavailable: ['目前無法取得位置（裝置定位服務可能關閉）。可以用「地區」篩選分店。', 'warn'],
+    unsupported: ['這個瀏覽器不支援定位功能。可以用「地區」篩選分店。', 'warn'],
+    insecure: ['定位功能只能在 HTTPS 或本機 (localhost) 網址下使用。可以用「地區」篩選分店。', 'warn']
+  };
+
+  function renderNearby() {
+    if (state.branchError) {
+      setGeoStatus('分店資料載入失敗（' + esc(state.branchError) + '）。上方的匯率比較不受影響。', 'bad');
+      $('branches').innerHTML = '';
+      return;
+    }
+    if (!branches) return;
+
+    var area = $('area').value;
+    var radius = $('radius').value;
+    var pos = state.pos;
+    var sort = pos ? $('sort').value : 'thb';
+
+    var items = branches
+      .filter(function (b) { return area === 'all' || b.city === area; })
+      .map(function (b) {
+        return {
+          b: b,
+          dist: pos ? C.haversineKm(pos.lat, pos.lng, b.latitude, b.longitude) : null,
+          est: state.shopBest[b.rateSource] || null
+        };
+      });
+
+    var shown = items;
+    if (pos && radius !== 'all') {
+      shown = items.filter(function (it) { return it.dist <= Number(radius); });
+    }
+
+    shown.sort(function (x, y) {
+      if (sort === 'distance') return x.dist - y.dist;
+      return (y.est ? y.est.thb : -1) - (x.est ? x.est.thb : -1);
+    });
+
+    // 狀態列
+    if (GEO_MSG[state.geo]) {
+      setGeoStatus(esc(GEO_MSG[state.geo][0]), GEO_MSG[state.geo][1]);
+    } else if (pos) {
+      var acc = pos.accuracy ? '（定位精確度約 ±' + fmtInt(pos.accuracy) + ' 公尺）' : '';
+      if (shown.length) {
+        setGeoStatus('已定位' + acc + '。' + (radius === 'all' ? '' : radius + ' 公里內') + '有 ' + shown.length + ' 家已收錄的分店。');
+      } else if (items.length) {
+        var nearest = items.slice().sort(function (x, y) { return x.dist - y.dist; })[0];
+        setGeoStatus('已定位' + acc + '。' + radius + ' 公里內沒有已收錄的分店，最近的是 <b>' +
+          esc(nearest.b.brand + ' ' + nearest.b.branchName) + '</b>（' + fmtDist(nearest.dist) + '）。<br>' +
+          (radius !== '10' && Number(radius) < 10 ? '<button type="button" class="btn ghost" data-radius="10">擴大到 10 公里</button>' : '') +
+          '<button type="button" class="btn ghost" data-radius="all">顯示全部</button>', 'warn');
+      } else {
+        setGeoStatus('已定位' + acc + '。這個地區沒有已收錄的分店，請改選其他地區。', 'warn');
+      }
+    } else {
+      setGeoStatus('尚未定位。下方列出' + (area === 'all' ? '所有' : esc(area) + '的') + '已收錄分店。');
+    }
+
+    // 與最近分店的預估差額 (距離 vs 換匯效益)
+    var nearestShown = pos && shown.length > 1
+      ? shown.slice().sort(function (x, y) { return x.dist - y.dist; })[0] : null;
+
+    $('branches').innerHTML = shown.map(function (it) {
+      var b = it.b;
+      var shop = shopByKey(b.rateSource) || { logo: '•' };
+      var src = data && data.sources[b.rateSource];
+      var estHtml = it.est
+        ? '<span class="num">' + fmtTHB(it.est.thb) + '</span>（' + esc(it.est.how) + '）' + (src && src.stale ? '・<span class="unknown">匯率為沿用資料</span>' : '')
+        : '<span class="unknown">' + (data ? '請先在上方輸入金額' : '匯率載入中') + '</span>';
+      var compare = '';
+      if (nearestShown && it !== nearestShown && it.est && nearestShown.est) {
+        var diff = it.est.thb - nearestShown.est.thb;
+        compare = '<div><dt>比最近分店</dt><dd class="num">' + (Math.round(diff) === 0 ? '差不多' : (diff > 0 ? '多 ' : '少 ') + fmtTHB(Math.abs(diff)).replace('฿ ', '฿')) +
+          '（相對 ' + esc(nearestShown.b.brand) + '，未計交通費）</dd></div>';
+      }
+      return '<li class="branch">' +
+        '<div class="branch-head"><span class="logo">' + esc(shop.logo) + '</span>' +
+          '<div><b>' + esc(b.brand) + '・' + esc(b.branchName) + '</b><small>' + esc(b.city) + '・' + esc(b.area) + '</small></div>' +
+          (it.dist != null ? '<span class="dist num">' + fmtDist(it.dist) + '<small>非路線距離</small></span>' : '') +
+        '</div>' +
+        '<dl class="branch-info">' +
+          '<div><dt>預估可換</dt><dd>' + estHtml + '</dd></div>' +
+          compare +
+          '<div><dt>兌換貨幣</dt><dd>' + esc((b.supportedCurrencies || []).join('、') || '未確認') + '</dd></div>' +
+          '<div><dt>匯率範圍</dt><dd>' + esc(b.rateScopeNote || '未確認') + '</dd></div>' +
+          '<div><dt>地址</dt><dd>' + (b.address ? esc(b.address) : '<span class="unknown">地址未查證，請以地圖為準</span>') + '</dd></div>' +
+          '<div><dt>營業時間</dt><dd>' + (b.openingHours ? esc(formatHours(b.openingHours)) : '<span class="unknown">營業資訊未確認</span>') + '</dd></div>' +
+          '<div><dt>資料查證</dt><dd>' + esc(b.lastVerifiedAt || '未查證') + '</dd></div>' +
+        '</dl>' +
+        '<div class="branch-actions">' +
+          '<a class="btn" href="' + esc(C.directionsUrl(b.latitude, b.longitude)) + '" target="_blank" rel="noopener">Google Maps 導航</a>' +
+          (b.googleMapsUrl ? '<a href="' + esc(b.googleMapsUrl) + '" target="_blank" rel="noopener">查看地點</a>' : '') +
+        '</div>' +
+      '</li>';
+    }).join('');
+  }
+
+  var DAYS = { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' };
+  function formatHours(hours) {
+    return Object.keys(DAYS).filter(function (d) { return hours[d]; })
+      .map(function (d) { return '週' + DAYS[d] + ' ' + hours[d]; }).join('、');
+  }
+
+  function setLocatedUi() {
+    var located = !!state.pos;
+    $('radius').disabled = !located;
+    $('sort').querySelector('option[value="distance"]').disabled = !located;
+    $('forget').hidden = !located;
+    $('locate').textContent = located ? '📍 重新定位' : '📍 使用目前位置';
+  }
+
+  function locate() {
+    if (!('geolocation' in navigator)) { state.geo = 'unsupported'; renderNearby(); return; }
+    if (window.isSecureContext === false) { state.geo = 'insecure'; renderNearby(); return; }
+    state.geo = 'locating';
+    $('locate').disabled = true;
+    renderNearby();
+    // 只在使用者按下按鈕時呼叫一次；不使用 watchPosition 持續追蹤
+    navigator.geolocation.getCurrentPosition(function (position) {
+      $('locate').disabled = false;
+      var lat = position.coords.latitude;
+      var lng = position.coords.longitude;
+      if (!C.isValidCoord(lat, lng)) { state.geo = 'unavailable'; renderNearby(); return; }
+      state.pos = { lat: lat, lng: lng, accuracy: position.coords.accuracy };
+      state.geo = 'ok';
+      setLocatedUi();
+      $('sort').value = 'distance';
+      renderNearby();
+    }, function (err) {
+      $('locate').disabled = false;
+      state.geo = err.code === 1 ? 'denied' : err.code === 3 ? 'timeout' : 'unavailable';
+      renderNearby();
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
+
+  function loadBranches() {
+    fetch('data/exchange-shops.json', { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (json) {
+        var seen = {};
+        // 只收座標有效、id 不重複的分店
+        branches = (Array.isArray(json && json.branches) ? json.branches : []).filter(function (b) {
+          if (!b || !b.id || seen[b.id] || !C.isValidCoord(b.latitude, b.longitude)) return false;
+          seen[b.id] = true;
+          return true;
+        });
+        var cities = [];
+        branches.forEach(function (b) { if (b.city && cities.indexOf(b.city) < 0) cities.push(b.city); });
+        $('area').innerHTML = '<option value="all">全部地區</option>' + cities.map(function (c) {
+          return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
+        }).join('');
+        renderNearby();
+      })
+      .catch(function (err) {
+        state.branchError = err.message;
+        renderNearby();
+      });
   }
 
   function renderFresh() {
@@ -381,18 +833,59 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   }
 
   // ---------------------------------------------------------------- 啟動
-  try {
-    var saved = localStorage.getItem('thb-amount');
-    if (saved && Number(saved) >= 0) $('amount').value = saved;
-  } catch (e) { /* 忽略 */ }
+  var savedTwd = store.get('thb-amount');
+  if (savedTwd && Number(savedTwd) >= 0) state.amounts.TWD = savedTwd;
+  var savedUsd = store.get('thb-amount-usd');
+  if (savedUsd && Number(savedUsd) >= 0) state.amounts.USD = savedUsd;
+  var savedCur = store.get('thb-currency');
 
-  $('amount').addEventListener('input', function () { if (data) calculate(); });
+  buildBillInputs();
+  state.usdCounts = C.splitUsdBills(Number(state.amounts.USD) || 0);
+  syncBillInputs();
+  setCurrency(savedCur === 'USD' ? 'USD' : 'TWD');
+
+  $('amount').addEventListener('input', function () {
+    state.usdCustom = false;
+    if (data) calculate();
+  });
   $('chips').addEventListener('click', function (e) {
     var btn = e.target.closest('.chip');
     if (!btn) return;
     $('amount').value = btn.dataset.v;
+    state.usdCustom = false;
     if (data) calculate();
   });
+  $('currency').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-cur]');
+    if (btn && btn.dataset.cur !== state.currency) setCurrency(btn.dataset.cur);
+  });
+  $('bill-grid').addEventListener('input', function (e) {
+    var input = e.target.closest('input[data-bill]');
+    if (!input) return;
+    var n = Math.floor(Number(input.value));
+    state.usdCounts[input.dataset.bill] = Number.isFinite(n) && n > 0 ? n : 0;
+    state.usdCustom = true;
+    $('amount').value = String(C.sumBills(state.usdCounts));
+    if (data) calculate(); else renderBillsSummary();
+  });
+
+  $('locate').addEventListener('click', locate);
+  $('forget').addEventListener('click', function () {
+    state.pos = null;
+    state.geo = 'idle';
+    setLocatedUi();
+    $('sort').value = 'thb';
+    renderNearby();
+  });
+  ['radius', 'sort', 'area'].forEach(function (id) { $(id).addEventListener('change', renderNearby); });
+  $('geo-status').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-radius]');
+    if (!btn) return;
+    $('radius').value = btn.dataset.radius;
+    renderNearby();
+  });
+
+  loadBranches();
 
   fetch('data/rates.json', { cache: 'no-store' })
     .then(function (res) {

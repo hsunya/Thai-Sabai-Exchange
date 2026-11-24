@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-24T08:56:00.958Z",
+  "generatedAt": "2026-11-24T09:26:19.855Z",
   "sources": {
     "happyrich": {
       "ok": true,
@@ -8,9 +8,41 @@
       "twdBuy": 1.03,
       "usdDenom": "100",
       "twdDenom": "2,000-100",
+      "usdTiers": [
+        {
+          "denom": "100",
+          "min": 100,
+          "max": 100,
+          "buy": 33.78
+        },
+        {
+          "denom": "50",
+          "min": 50,
+          "max": 50,
+          "buy": 33.78
+        },
+        {
+          "denom": "20-10",
+          "min": 10,
+          "max": 20,
+          "buy": 33.68
+        },
+        {
+          "denom": "5",
+          "min": 5,
+          "max": 5,
+          "buy": 33.58
+        },
+        {
+          "denom": "2-1",
+          "min": 1,
+          "max": 2,
+          "buy": 33.23
+        }
+      ],
       "updatedAt": "2026-11-24 13:52",
-      "fetchedAt": "2026-11-24T08:56:00.958Z",
-      "lastSuccessAt": "2026-11-24T08:56:00.958Z",
+      "fetchedAt": "2026-11-24T09:26:19.855Z",
+      "lastSuccessAt": "2026-11-24T09:26:19.855Z",
       "error": null
     },
     "superrich": {
@@ -20,9 +52,41 @@
       "twdBuy": 1.035,
       "usdDenom": "100",
       "twdDenom": "2,000-100",
+      "usdTiers": [
+        {
+          "denom": "100",
+          "min": 100,
+          "max": 100,
+          "buy": 33.83
+        },
+        {
+          "denom": "50",
+          "min": 50,
+          "max": 50,
+          "buy": 33.83
+        },
+        {
+          "denom": "20-10",
+          "min": 10,
+          "max": 20,
+          "buy": 33.77
+        },
+        {
+          "denom": "5",
+          "min": 5,
+          "max": 5,
+          "buy": 33.72
+        },
+        {
+          "denom": "1",
+          "min": 1,
+          "max": 1,
+          "buy": 33.57
+        }
+      ],
       "updatedAt": "2026-11-24 15:29",
-      "fetchedAt": "2026-11-24T08:56:00.958Z",
-      "lastSuccessAt": "2026-11-24T08:56:00.958Z",
+      "fetchedAt": "2026-11-24T09:26:19.855Z",
+      "lastSuccessAt": "2026-11-24T09:26:19.855Z",
       "error": null
     },
     "tt": {
@@ -32,18 +96,38 @@
       "twdBuy": 1.025,
       "usdDenom": "100-50",
       "twdDenom": "1,000-100",
+      "usdTiers": [
+        {
+          "denom": "100-50",
+          "min": 50,
+          "max": 100,
+          "buy": 33.71
+        },
+        {
+          "denom": "20-5",
+          "min": 5,
+          "max": 20,
+          "buy": 33.23
+        },
+        {
+          "denom": "2-1",
+          "min": 1,
+          "max": 2,
+          "buy": 32.73
+        }
+      ],
       "updatedAt": "2026-11-24 14:06",
-      "fetchedAt": "2026-11-24T08:56:00.958Z",
-      "lastSuccessAt": "2026-11-24T08:56:00.958Z",
+      "fetchedAt": "2026-11-24T09:26:19.855Z",
+      "lastSuccessAt": "2026-11-24T09:26:19.855Z",
       "error": null
     },
     "bot": {
       "ok": true,
       "stale": false,
       "usdCashSell": 33.21,
-      "updatedAt": "2026-11-24 16:40",
-      "fetchedAt": "2026-11-24T08:56:00.958Z",
-      "lastSuccessAt": "2026-11-24T08:56:00.958Z",
+      "updatedAt": "2026-11-24 17:20",
+      "fetchedAt": "2026-11-24T09:26:19.855Z",
+      "lastSuccessAt": "2026-11-24T09:26:19.855Z",
       "error": null
     }
   }

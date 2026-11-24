@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "description": "兌換所分店資料。只收錄經查證的欄位，未查證的欄位為 null。匯率不存在這裡，透過 rateSource 對應 rates.json 的 sources。",
+  "branches": [
+    {
+      "id": "superrich-h01",
+      "brand": "Super Rich",
+      "branchName": "總行 H01",
+      "city": "曼谷",
+      "area": "水門市場 Pratunam",
+      "address": null,
+      "latitude": 13.7484897,
+      "longitude": 100.5416936,
+      "openingHours": null,
+      "supportedCurrencies": ["TWD", "USD"],
+      "rateSource": "superrich",
+      "rateScope": "branch",
+      "rateScopeNote": "匯率為 Super Rich 官方 API 總行 (branchId=10 / H01) 公告",
+      "googleMapsUrl": "https://maps.app.goo.gl/3MNQoSAQk1DhFMV4A",
+      "lastVerifiedAt": "2026-11-24",
+      "verification": "座標取自專案原有 Google Maps 地點連結 (Super Rich Currency Exchange)；地址與營業時間尚未查證"
+    },
+    {
+      "id": "happyrich-suvarnabhumi",
+      "brand": "Happy Rich",
+      "branchName": "蘇凡納布機場",
+      "city": "北欖府",
+      "area": "蘇凡納布機場 Suvarnabhumi",
+      "address": null,
+      "latitude": 13.6924722,
+      "longitude": 100.7509648,
+      "openingHours": null,
+      "supportedCurrencies": ["TWD", "USD"],
+      "rateSource": "happyrich",
+      "rateScope": "location",
+      "rateScopeNote": "匯率為 Happy Rich 官網蘇凡納布機場 (Location 32) 公告；機場內可能有多個櫃位，未逐一確認是否同價",
+      "googleMapsUrl": "https://maps.app.goo.gl/GCgjoszYuH6pgrFt8",
+      "lastVerifiedAt": "2026-11-24",
+      "verification": "座標取自專案原有 Google Maps 地點連結 (HappyRich Money Exchange)；地址與營業時間尚未查證"
+    },
+    {
+      "id": "ttexchange-t21-pattaya",
+      "brand": "T.T. Exchange",
+      "branchName": "Terminal 21 Pattaya (G 樓)",
+      "city": "芭達雅",
+      "area": "Terminal 21 Pattaya",
+      "address": null,
+      "latitude": 12.9502013,
+      "longitude": 100.8887198,
+      "openingHours": null,
+      "supportedCurrencies": ["TWD", "USD"],
+      "rateSource": "tt",
+      "rateScope": "branch",
+      "rateScopeNote": "匯率為 T.T. Exchange 官方 API Terminal 21 Pattaya Branch (branch_id=21) 公告",
+      "googleMapsUrl": "https://maps.app.goo.gl/wvNBw6LAqhJPQGoC7",
+      "lastVerifiedAt": "2026-11-24",
+      "verification": "座標取自專案原有 Google Maps 地點連結 (T.T. Currency Exchange - Terminal 21 Pattaya G Floor)；地址與營業時間尚未查證"
+    }
+  ]
+}

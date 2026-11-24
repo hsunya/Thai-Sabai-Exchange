@@ -56,6 +56,23 @@ function normalizeDenom(text) {
     .trim() || null;
 }
 
+// 美金各面額匯率表：[{ denom: "20-10", min: 10, max: 20, buy: 33.68 }, ...]，由大面額排到小面額。
+// 網頁依每張鈔票面額找對應的一筆計算 (site/js/calc.js)。同一面額重複出現時取第一筆。
+function buildUsdTiers(entries) {
+  const seen = new Set();
+  const tiers = [];
+  for (const { denom, buy } of entries) {
+    const label = normalizeDenom(denom);
+    const rate = parseFloat(String(buy ?? '').replace(/,/g, ''));
+    const nums = (label ?? '').replace(/,/g, '').match(/\d+/g)?.map(Number) ?? [];
+    if (!label || seen.has(label) || !Number.isFinite(rate) || rate <= 0 || nums.length === 0) continue;
+    seen.add(label);
+    tiers.push({ denom: label, min: Math.min(...nums), max: Math.max(...nums), buy: rate });
+  }
+  tiers.sort((a, b) => b.max - a.max);
+  return tiers;
+}
+
 function describeError(err) {
   if (err?.name === 'TimeoutError' || err?.name === 'AbortError') {
     return `連線逾時 (${TIMEOUT_MS / 1000} 秒)`;
@@ -102,6 +119,9 @@ async function fetchHappyRich() {
     twdBuy: toNumber(twd.buyPrice, 'TWD 買價'),
     usdDenom: normalizeDenom(usd.currencyDenom),
     twdDenom: normalizeDenom(twd.currencyDenom),
+    usdTiers: buildUsdTiers(list
+      .filter((d) => d.currencyCode === 'USD')
+      .map((d) => ({ denom: d.currencyDenom, buy: d.buyPrice }))),
     updatedAt,
   };
 }
@@ -139,6 +159,7 @@ async function fetchSuperRich() {
     twdBuy: toNumber(twd.buyText, 'TWD 買價'),
     usdDenom: normalizeDenom(usd.denomRem),
     twdDenom: normalizeDenom(twd.denomRem),
+    usdTiers: buildUsdTiers((exchange.USD ?? []).map((r) => ({ denom: r.denomRem, buy: r.buyText }))),
     updatedAt: json.data.time?.date ? `${json.data.time.date}${latest ? ' ' + latest : ''}` : null,
   };
 }
@@ -147,10 +168,10 @@ async function fetchSuperRich() {
 async function fetchTT() {
   const [ratesBody, timeBody] = await Promise.all([
     request('https://api.software.ttexchange.com/currencies?is_main=false&branch_id=21'),
-    request('https://api.software.ttexchange.com/currencies/updated_at?branch_id=22'),
+    request('https://api.software.ttexchange.com/currencies/updated_at?branch_id=21'),
   ]);
   const list = parseJson(ratesBody, 'TT Exchange');
-  // id 1 = USD(L) 100-50、id 25 = TWD
+  // id 1 = USD(L) 100-50、id 2 = USD(M) 20-5、id 3 = USD(S) 2-1、id 25 = TWD
   const usd = Array.isArray(list) ? list.find((d) => d.id === 1) : null;
   const twd = Array.isArray(list) ? list.find((d) => d.id === 25) : null;
   if (!usd || !twd) {
@@ -166,6 +187,9 @@ async function fetchTT() {
     twdBuy: toNumber(twd.current_buy_rate, 'TWD 買價'),
     usdDenom: normalizeDenom(usd.description),
     twdDenom: normalizeDenom(twd.description),
+    usdTiers: buildUsdTiers(list
+      .filter((d) => d.currency_group_id === usd.currency_group_id)
+      .map((d) => ({ denom: d.description, buy: d.current_buy_rate }))),
     updatedAt: m ? `${m[1]} ${m[2]}` : updated || null,
   };
 }
