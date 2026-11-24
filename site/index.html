@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>泰銖換匯比價</title>
+<meta name="description" content="帶台幣或美金去泰國，在哪裡換泰銖最划算？即時比較 Super Rich、Happy Rich、T.T. Exchange 與臺灣銀行匯率。">
+<meta property="og:title" content="泰銖換匯比價">
+<meta property="og:description" content="帶台幣或美金去泰國，在哪裡換泰銖最划算？即時比較曼谷兌換所與臺灣銀行匯率。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ctext x='32' y='46' font-size='40' font-family='Arial' font-weight='700' text-anchor='middle' fill='white'%3E%E0%B8%BF%3C/text%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f4f6f5;
+  --surface: #ffffff;
+  --surface-2: #eef2f1;
+  --text: #15211f;
+  --muted: #5b6b68;
+  --border: #dde4e2;
+  --accent: #0f766e;
+  --accent-soft: #d8efec;
+  --accent-text: #ffffff;
+  --warn: #9a5b00;
+  --warn-bg: #fff2dc;
+  --bad: #b42318;
+  --bad-bg: #fde8e6;
+  --shadow: 0 1px 2px rgba(16, 24, 22, .05), 0 4px 16px rgba(16, 24, 22, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1413;
+    --surface: #171e1d;
+    --surface-2: #1f2827;
+    --text: #e6eeec;
+    --muted: #93a5a1;
+    --border: #2a3533;
+    --accent: #3cc2b4;
+    --accent-soft: #163b37;
+    --accent-text: #08201d;
+    --warn: #f5b454;
+    --warn-bg: #3a2c14;
+    --bad: #ff8b80;
+    --bad-bg: #3d1c1a;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1413;
+  --surface: #171e1d;
+  --surface-2: #1f2827;
+  --text: #e6eeec;
+  --muted: #93a5a1;
+  --border: #2a3533;
+  --accent: #3cc2b4;
+  --accent-soft: #163b37;
+  --accent-text: #08201d;
+  --warn: #f5b454;
+  --warn-bg: #3a2c14;
+  --bad: #ff8b80;
+  --bad-bg: #3d1c1a;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+.wrap { max-width: 960px; margin: 0 auto; padding: 28px 16px 56px; }
+
+/* ---------- header ---------- */
+header { margin-bottom: 20px; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 6px; letter-spacing: .01em; }
+.lede { margin: 0; color: var(--muted); }
+.fresh { margin-top: 10px; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.fresh b { color: var(--text); font-weight: 600; }
+
+/* ---------- panels ---------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+h2 { font-size: 18px; margin: 0 0 14px; }
+
+/* ---------- calculator ---------- */
+.calc { margin-bottom: 18px; }
+.amount-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.amount-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 6px 14px; flex: 1 1 220px; min-width: 0;
+}
+.amount-field:focus-within { border-color: var(--accent); }
+.amount-field span { color: var(--muted); font-weight: 600; white-space: nowrap; }
+.amount-field input {
+  flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+  font: inherit; font-size: 26px; font-weight: 700; padding: 4px 0; outline: none;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.chip:hover { border-color: var(--accent); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+
+.best {
+  margin: 18px 0 6px; padding: 16px 18px; border-radius: 14px;
+  background: var(--accent-soft); display: grid; gap: 2px;
+}
+.best .label { font-size: 14px; color: var(--muted); }
+.best .value { font-size: 34px; font-weight: 800; line-height: 1.2; color: var(--accent); }
+.best .how { font-size: 15px; }
+
+.ranking { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.rank {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 4px 12px; align-items: center;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+}
+.rank.top { border-color: var(--accent); }
+.rank .pos { font-weight: 700; color: var(--muted); text-align: center; }
+.rank.top .pos { color: var(--accent); }
+.rank .who { min-width: 0; }
+.rank .who b { font-weight: 600; }
+.rank .who small { display: block; color: var(--muted); font-size: 13px; }
+.rank .amt { text-align: right; font-weight: 700; white-space: nowrap; }
+.rank .amt small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+.rank.na { opacity: .6; }
+.note { font-size: 13px; color: var(--muted); margin: 12px 0 0; }
+
+/* ---------- rate cards ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.card { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.card-head { display: flex; gap: 10px; align-items: center; }
+.logo {
+  width: 36px; height: 36px; border-radius: 10px; flex: none; display: grid; place-items: center;
+  background: var(--surface-2); color: var(--accent); font-weight: 800; font-size: 14px;
+}
+.card-head b { display: block; line-height: 1.3; }
+.card-head small { color: var(--muted); font-size: 13px; }
+.rates { display: grid; gap: 4px; margin: 0; }
+.rates div { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.rates dt { color: var(--muted); font-size: 14px; }
+.rates dt small { display: block; font-size: 12px; line-height: 1.3; }
+.rates dd { margin: 0; font-size: 20px; font-weight: 700; }
+.card-foot { margin-top: auto; font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; }
+.status { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; align-self: flex-start; }
+.status.warn { background: var(--warn-bg); color: var(--warn); }
+.status.bad { background: var(--bad-bg); color: var(--bad); }
+details.err { font-size: 12px; color: var(--muted); }
+details.err summary { cursor: pointer; }
+
+/* ---------- misc ---------- */
+.banner { padding: 12px 16px; border-radius: 12px; background: var(--bad-bg); color: var(--bad); margin-bottom: 18px; }
+.info { font-size: 14px; color: var(--muted); }
+.info h2 { color: var(--text); font-size: 16px; }
+.info ul { margin: 0; padding-left: 20px; }
+.info li { margin: 4px 0; }
+footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 24px; }
+.skeleton { color: transparent !important; background: var(--surface-2); border-radius: 6px; }
+
+@media (max-width: 560px) {
+  h1 { font-size: 25px; }
+  .panel { padding: 16px; }
+  .best .value { font-size: 28px; }
+  .amount-field input { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>泰銖換匯比價</h1>
+    <p class="lede">帶台幣或美金去泰國，在哪裡換泰銖最划算？</p>
+    <div class="fresh" id="fresh"><span>資料載入中…</span></div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- ========= 換算 ========= -->
+  <section class="panel calc" aria-labelledby="calc-title">
+    <h2 id="calc-title">我有多少台幣？</h2>
+    <div class="amount-row">
+      <label class="amount-field">
+        <span>NT$</span>
+        <input id="amount" class="num" type="number" inputmode="numeric" min="0" step="100" value="10000" aria-label="新臺幣金額">
+      </label>
+      <div class="chips" id="chips">
+        <button type="button" class="chip" data-v="5000">5,000</button>
+        <button type="button" class="chip" data-v="10000">1 萬</button>
+        <button type="button" class="chip" data-v="30000">3 萬</button>
+        <button type="button" class="chip" data-v="50000">5 萬</button>
+      </div>
+    </div>
+
+    <div class="best" id="best" aria-live="polite">
+      <span class="label">最多可以換到</span>
+      <span class="value num skeleton">฿ 00,000</span>
+      <span class="how">&nbsp;</span>
+    </div>
+
+    <ol class="ranking" id="ranking"></ol>
+    <p class="note">「經台銀換美金」＝ 先在臺灣銀行用台幣買美金現鈔，到泰國再換泰銖。美金以大鈔（100 元）匯率計算，未計入台銀手續費與零頭。</p>
+  </section>
+
+  <!-- ========= 各家匯率 ========= -->
+  <h2>各家匯率</h2>
+  <div class="cards" id="cards"></div>
+
+  <section class="panel info">
+    <h2>說明</h2>
+    <ul>
+      <li><b>買價</b>是兌換所向你「買」外幣的價格，也就是 1 美金 / 1 台幣可以換到多少泰銖，數字越大越划算。</li>
+      <li>兌換所的匯率取最大面額（美金 100 元、台幣 1,000 元以上）。小面額鈔票匯率較差，以現場公告為準。</li>
+      <li>臺灣銀行顯示的是<b>本行現金賣出</b>：在台銀用台幣買 1 美金現鈔需要多少台幣。</li>
+      <li>匯率由 GitHub Actions 每 30 分鐘自動抓取一次，僅供參考。某個來源暫時抓不到時，會沿用上一次的資料並標示。</li>
+    </ul>
+  </section>
+
+  <footer>
+    資料來源：<a href="https://www.superrichthailand.com/" target="_blank" rel="noopener">Super Rich</a>、
+    <a href="https://www.happyrich.co.th/" target="_blank" rel="noopener">Happy Rich</a>、
+    <a href="https://www.ttexchange.com/" target="_blank" rel="noopener">T.T. Exchange</a>、
+    <a href="https://rate.bot.com.tw/xrt?Lang=zh-TW" target="_blank" rel="noopener">臺灣銀行</a>
+    ・ <a href="data/rates.json">rates.json</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // 兌換所基本資料 (key 對應 rates.json 的 sources)
+  var SHOPS = [
+    { key: 'superrich', name: 'Super Rich', place: '曼谷 水門市場', logo: 'SR', map: 'https://maps.app.goo.gl/3MNQoSAQk1DhFMV4A' },
+    { key: 'happyrich', name: 'Happy Rich', place: '蘇凡納布機場', logo: 'HR', map: 'https://maps.app.goo.gl/GCgjoszYuH6pgrFt8' },
+    { key: 'tt', name: 'T.T. Exchange', place: '芭達雅 Terminal 21', logo: 'TT', map: 'https://maps.app.goo.gl/wvNBw6LAqhJPQGoC7' }
+  ];
+  var BOT = { key: 'bot', name: '臺灣銀行', place: '牌告匯率', logo: '台銀', map: 'https://maps.app.goo.gl/xXNYxiv6cNzA968F7' };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var data = null;
+
+  var fmtTHB = function (n) { return '฿ ' + Math.round(n).toLocaleString('zh-TW'); };
+  var fmtUSD = function (n) { return 'US$ ' + n.toLocaleString('zh-TW', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  var fmtRate = function (n) { return n == null ? '—' : String(n); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  // ISO 時間 → 台灣時間 MM/DD HH:mm
+  var twTime = function (iso, withYear) {
+    if (!iso) return '—';
+    var opt = { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false };
+    if (withYear) opt.year = 'numeric';
+    return new Intl.DateTimeFormat('zh-TW', opt).format(new Date(iso));
+  };
+  // "2026-11-24 15:29" → "11/24 15:29"
+  var shortLocal = function (s) {
+    var m = /^\d{4}-(\d{2})-(\d{2})\s+(\d{2}:\d{2})/.exec(s || '');
+    return m ? m[1] + '/' + m[2] + ' ' + m[3] : (s || '—');
+  };
+  var hasRate = function (src) { return src && (src.ok || src.stale); };
+
+  // ---------------------------------------------------------------- 卡片
+  function statusHtml(src) {
+    if (!src || (!src.ok && !src.stale)) {
+      return '<span class="status bad">暫無資料</span>' + errHtml(src);
+    }
+    if (src.stale) {
+      return '<span class="status warn">沿用 ' + esc(twTime(src.lastSuccessAt)) + ' 的資料</span>' + errHtml(src);
+    }
+    return '';
+  }
+  function errHtml(src) {
+    return src && src.error ? '<details class="err"><summary>失敗原因</summary>' + esc(src.error) + '</details>' : '';
+  }
+
+  function renderCards() {
+    var html = SHOPS.map(function (shop) {
+      var s = data.sources[shop.key];
+      var ok = hasRate(s);
+      return '<article class="panel card">' +
+        '<div class="card-head"><span class="logo">' + shop.logo + '</span><div><b>' + shop.name + '</b><small>' + shop.place + '</small></div></div>' +
+        statusHtml(s) +
+        '<dl class="rates">' +
+          '<div><dt>美金買價 <small>' + esc(ok && s.usdDenom ? '面額 ' + s.usdDenom : '') + '</small></dt><dd class="num">' + fmtRate(ok ? s.usdBuy : null) + '</dd></div>' +
+          '<div><dt>台幣買價 <small>' + esc(ok && s.twdDenom ? '面額 ' + s.twdDenom : '') + '</small></dt><dd class="num">' + fmtRate(ok ? s.twdBuy : null) + '</dd></div>' +
+        '</dl>' +
+        '<div class="card-foot"><span>更新 ' + esc(ok ? shortLocal(s.updatedAt) : '—') + '（泰國時間）</span><a href="' + shop.map + '" target="_blank" rel="noopener">地圖</a></div>' +
+      '</article>';
+    });
+
+    var b = data.sources[BOT.key];
+    var bok = hasRate(b);
+    html.push('<article class="panel card">' +
+      '<div class="card-head"><span class="logo">' + BOT.logo + '</span><div><b>' + BOT.name + '</b><small>' + BOT.place + '</small></div></div>' +
+      statusHtml(b) +
+      '<dl class="rates">' +
+        '<div><dt>美金現金賣出<small>1 美金現鈔的台幣價</small></dt><dd class="num">' + fmtRate(bok ? b.usdCashSell : null) + '</dd></div>' +
+      '</dl>' +
+      '<div class="card-foot"><span>掛牌 ' + esc(bok ? shortLocal(b.updatedAt) : '—') + '（台灣時間）</span><a href="' + BOT.map + '" target="_blank" rel="noopener">地圖</a></div>' +
+    '</article>');
+
+    $('cards').innerHTML = html.join('');
+  }
+
+  // ---------------------------------------------------------------- 換算 & 排名
+  function calculate() {
+    var twd = Math.max(0, parseFloat($('amount').value) || 0);
+    var bot = data.sources[BOT.key];
+    var usdSell = hasRate(bot) ? bot.usdCashSell : 0;
+    var usd = usdSell > 0 ? twd / usdSell : 0;
+
+    var options = [];
+    SHOPS.forEach(function (shop) {
+      var s = data.sources[shop.key];
+      var ok = hasRate(s);
+      options.push({
+        who: shop.name, how: '直接換台幣', place: shop.place,
+        thb: ok ? twd * s.twdBuy : null,
+        detail: ok ? '1 台幣 = ' + s.twdBuy + ' 泰銖' : '暫無資料'
+      });
+      options.push({
+        who: shop.name, how: '經台銀換美金', place: shop.place,
+        thb: ok && usdSell > 0 ? usd * s.usdBuy : null,
+        detail: ok && usdSell > 0 ? fmtUSD(usd) + ' × ' + s.usdBuy : '暫無資料'
+      });
+    });
+
+    var valid = options.filter(function (o) { return o.thb != null; });
+    valid.sort(function (a, b) { return b.thb - a.thb; });
+    var na = options.filter(function (o) { return o.thb == null; });
+    var top = valid[0];
+
+    var best = $('best');
+    if (top && twd > 0) {
+      best.querySelector('.value').textContent = fmtTHB(top.thb);
+      best.querySelector('.how').innerHTML = '<b>' + esc(top.who) + '</b>・' + esc(top.how) + '（' + esc(top.place) + '）';
+    } else {
+      best.querySelector('.value').textContent = '฿ 0';
+      best.querySelector('.how').textContent = twd > 0 ? '目前沒有可用的匯率' : '請輸入台幣金額';
+    }
+    best.querySelector('.value').classList.remove('skeleton');
+
+    $('ranking').innerHTML = valid.map(function (o, i) {
+      var diff = i === 0 ? '最划算' : '少 ' + fmtTHB(top.thb - o.thb).replace('฿ ', '฿');
+      return '<li class="rank' + (i === 0 ? ' top' : '') + '">' +
+        '<span class="pos num">' + (i + 1) + '</span>' +
+        '<span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) + '<small class="num">' + esc(o.detail) + '</small></span>' +
+        '<span class="amt num">' + fmtTHB(o.thb) + '<small>' + diff + '</small></span>' +
+      '</li>';
+    }).concat(na.map(function (o) {
+      return '<li class="rank na"><span class="pos">–</span><span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) + '<small>暫無資料</small></span><span class="amt">—</span></li>';
+    })).join('');
+
+    // 快速金額按鈕的選取狀態
+    Array.prototype.forEach.call($('chips').children, function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.dataset.v) === twd));
+    });
+    try { localStorage.setItem('thb-amount', String(twd)); } catch (e) { /* 無痕模式等情況忽略 */ }
+  }
+
+  function renderFresh() {
+    var list = [BOT].concat(SHOPS);
+    var failed = list.filter(function (s) { var src = data.sources[s.key]; return !src || !src.ok; });
+    $('fresh').innerHTML =
+      '<span>資料更新：<b class="num">' + esc(twTime(data.generatedAt, true)) + '</b>（台灣時間）</span>' +
+      (failed.length
+        ? '<span>⚠ ' + failed.map(function (s) { return s.name; }).join('、') + ' 本次未更新</span>'
+        : '<span>4 個來源皆為最新</span>');
+  }
+
+  // ---------------------------------------------------------------- 啟動
+  try {
+    var saved = localStorage.getItem('thb-amount');
+    if (saved && Number(saved) >= 0) $('amount').value = saved;
+  } catch (e) { /* 忽略 */ }
+
+  $('amount').addEventListener('input', function () { if (data) calculate(); });
+  $('chips').addEventListener('click', function (e) {
+    var btn = e.target.closest('.chip');
+    if (!btn) return;
+    $('amount').value = btn.dataset.v;
+    if (data) calculate();
+  });
+
+  fetch('data/rates.json', { cache: 'no-store' })
+    .then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then(function (json) {
+      data = json;
+      renderFresh();
+      renderCards();
+      calculate();
+    })
+    .catch(function (err) {
+      $('fresh').innerHTML = '';
+      var banner = $('banner');
+      banner.hidden = false;
+      banner.textContent = '匯率資料載入失敗（' + err.message + '），請稍後再試。';
+      $('best').querySelector('.how').textContent = '匯率資料載入失敗';
+    });
+})();
+</script>
+</body>
+</html>

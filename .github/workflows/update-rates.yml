@@ -1,0 +1,54 @@
+name: 更新匯率並部署
+
+on:
+  # 每 30 分鐘抓一次 (UTC 時間；GitHub 排程在尖峰時段可能延遲幾分鐘)
+  schedule:
+    - cron: '*/30 * * * *'
+  # 可在 Actions 頁面手動執行
+  workflow_dispatch:
+  # 改了網頁或腳本後立即重新部署
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      # 抓取四個來源，輸出 site/data/rates.json。
+      # 某個來源失敗時，沿用目前線上那份 rates.json 的數值 (標示為 stale)。
+      - name: 抓取匯率
+        run: node scripts/fetch-rates.mjs
+        env:
+          PREVIOUS_RATES_URL: ${{ steps.pages.outputs.base_url }}/data/rates.json
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
