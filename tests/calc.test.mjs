@@ -278,3 +278,36 @@ test('ageMinutes：資料經過時間', () => {
   assert.equal(C.ageMinutes('not a date', now), null);
   assert.equal(C.ageMinutes(null, now), null);
 });
+
+// ---------------------------------------------------------------- 搜尋 & 收藏
+
+const ASOK = {
+  brand: 'Super Rich', branchName: 'Terminal 21 Asok G Floor', city: '曼谷都會區',
+  area: 'Terminal 21 Asok G Floor', address: 'Terminal 21 Asok G Floor',
+};
+
+test('matchesQuery：不分大小寫、多個關鍵字須全部符合', () => {
+  assert.equal(C.matchesQuery(ASOK, ''), true);
+  assert.equal(C.matchesQuery(ASOK, '   '), true);
+  assert.equal(C.matchesQuery(ASOK, 'asok'), true);
+  assert.equal(C.matchesQuery(ASOK, 'SUPER  terminal'), true);
+  assert.equal(C.matchesQuery(ASOK, '曼谷'), true);
+  assert.equal(C.matchesQuery(ASOK, 'asok pattaya'), false);
+  assert.equal(C.matchesQuery({ brand: 'T.T. Exchange', branchName: null, address: null }, 't.t.'), true);
+});
+
+test('parseFavorites：只接受字串 id，去除重複，格式錯誤回傳空陣列', () => {
+  assert.deepEqual(C.parseFavorites('["superrich-10","tt-66","superrich-10"]'), ['superrich-10', 'tt-66']);
+  assert.deepEqual(C.parseFavorites('[1, null, "", "tt-1", {"lat": 13}]'), ['tt-1']);
+  assert.deepEqual(C.parseFavorites('{"a":1}'), []);
+  assert.deepEqual(C.parseFavorites('not json'), []);
+  assert.deepEqual(C.parseFavorites(null), []);
+});
+
+test('toggleFavorite：加入與移除', () => {
+  assert.deepEqual(C.toggleFavorite([], 'tt-1'), ['tt-1']);
+  assert.deepEqual(C.toggleFavorite(['tt-1', 'tt-2'], 'tt-1'), ['tt-2']);
+  const list = ['a'];
+  C.toggleFavorite(list, 'b');
+  assert.deepEqual(list, ['a'], '不修改原陣列');
+});

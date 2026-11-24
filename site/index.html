@@ -200,6 +200,19 @@ details.err summary { cursor: pointer; }
   font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2);
   border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px;
 }
+.filters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-top: 10px; }
+.filters label { font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.filters select, .search {
+  font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px;
+}
+.filters input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.search { flex: 1 1 220px; min-width: 0; }
+.fav {
+  border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 999px;
+  font: inherit; font-size: 13px; padding: 3px 10px; cursor: pointer; white-space: nowrap;
+}
+.fav[aria-pressed="true"] { border-color: var(--warn); color: var(--warn); background: var(--warn-bg); }
 .geo-status { margin: 12px 0 0; padding: 10px 14px; border-radius: 10px; background: var(--surface-2); font-size: 14px; }
 .geo-status.warn { background: var(--warn-bg); color: var(--warn); }
 .geo-status.bad { background: var(--bad-bg); color: var(--bad); }
@@ -324,9 +337,24 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         <select id="area"><option value="all">全部地區</option></select>
       </label>
     </div>
+    <div class="filters" role="group" aria-label="篩選分店">
+      <input type="search" class="search" id="q" placeholder="搜尋分店、商場或地址" aria-label="搜尋分店、商場或地址" autocomplete="off">
+      <label>品牌
+        <select id="brand"><option value="all">全部品牌</option></select>
+      </label>
+      <label>貨幣
+        <select id="cur-filter">
+          <option value="all">不限</option>
+          <option value="TWD">可換台幣</option>
+          <option value="USD">可換美金</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="open-only"> 只看營業中</label>
+      <label><input type="checkbox" id="fav-only"> 只看收藏 <span id="fav-count" class="num"></span></label>
+    </div>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite">尚未定位。下方列出所有已收錄的分店。</p>
     <ul class="branches" id="branches"></ul>
-    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。收錄 Super Rich、T.T. Exchange 官方公布的分店與 Happy Rich 蘇凡納布分店，每家分店使用自己的公告匯率估算。營業時間取自各家官方資料，「營業中」依泰國時間的一般營業時間判斷，國定假日或臨時公休可能不同，出發前請再確認。交通費只計入你自己填寫的金額。</p>
+    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。收錄 Super Rich、T.T. Exchange 官方公布的分店與 Happy Rich 蘇凡納布分店，每家分店使用自己的公告匯率估算。營業時間取自各家官方資料，「營業中」依泰國時間的一般營業時間判斷，國定假日或臨時公休可能不同，出發前請再確認。交通費只計入你自己填寫的金額。收藏的分店只記錄分店代號，存在這台裝置的瀏覽器裡，不含任何位置資訊。</p>
   </section>
 
   <section class="panel info">
@@ -391,6 +419,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     usdCustom: false,      // 使用者自行輸入了鈔票張數
     input: null,           // 目前有效的輸入 { cur: 'TWD', twd } 或 { cur: 'USD', counts }；無效時為 null
     showAll: false,        // 附近分店清單是否展開全部
+    favorites: [],         // 收藏的分店 id (localStorage：thb-favorites，只存 id)
     // 定位：只存在記憶體，不寫入 localStorage / Cookie / URL
     pos: null,             // { lat, lng, accuracy }
     fares: {},             // 使用者自填的交通費 (泰銖)，key 為分店 id；只存在記憶體
@@ -710,8 +739,16 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     var sort = pos ? $('sort').value : 'thb';
 
     var now = new Date();
+    var f = currentFilters();
     var items = branches
-      .filter(function (b) { return area === 'all' || b.city === area; })
+      .filter(function (b) {
+        if (area !== 'all' && b.city !== area) return false;
+        if (f.brand !== 'all' && b.brand !== f.brand) return false;
+        if (f.favOnly && state.favorites.indexOf(b.id) < 0) return false;
+        if (f.cur !== 'all' && !hasCurrency(branchRateOf(b), f.cur)) return false;
+        if (f.openOnly && C.openStatus(b.openingHours, now).status !== 'open') return false;
+        return C.matchesQuery(b, f.q);
+      })
       .map(function (b) {
         var est = branchEstimate(b);
         var fare = state.fares[b.id] || 0;
@@ -755,10 +792,12 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
           (radius !== '10' && Number(radius) < 10 ? '<button type="button" class="btn ghost" data-radius="10">擴大到 10 公里</button>' : '') +
           '<button type="button" class="btn ghost" data-radius="all">顯示全部</button>', 'warn');
       } else {
-        setGeoStatus('已定位' + acc + '。這個地區沒有已收錄的分店，請改選其他地區。', 'warn');
+        setGeoStatus('已定位' + acc + '。沒有符合篩選條件的分店。' + clearFiltersBtn(), 'warn');
       }
+    } else if (!shown.length) {
+      setGeoStatus('沒有符合篩選條件的分店。' + clearFiltersBtn(), 'warn');
     } else {
-      setGeoStatus('尚未定位。下方依預估可換得泰銖列出' + (area === 'all' ? '' : esc(area) + '的') + '已收錄分店（共 ' + shown.length + ' 家）。');
+      setGeoStatus('尚未定位。下方依預估可換得泰銖列出' + (filtersActive() || area !== 'all' ? '符合條件的' : '') + '已收錄分店（共 ' + shown.length + ' 家）。');
     }
 
     // 與最近分店的預估差額 (距離 vs 換匯效益)
@@ -801,6 +840,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
           '<div><b>' + esc(b.brand) + '・' + esc(b.branchName) + '</b><small>' + esc([b.city, b.area !== b.branchName ? b.area : null].filter(Boolean).join('・') || '地區未分類') + '</small></div>' +
           (it.dist != null ? '<span class="dist num">' + fmtDist(it.dist) + '<small>非路線距離</small></span>' : '') +
         '</div>' +
+        favButtonHtml(b) +
         '<dl class="branch-info">' +
           '<div><dt>預估可換</dt><dd>' + estHtml + '</dd></div>' +
           fareHtml +
@@ -823,6 +863,53 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   }
 
   var BRAND_LOGO = { 'Super Rich': 'SR', 'Happy Rich': 'HR', 'T.T. Exchange': 'TT' };
+
+  // ---------------------------------------------------------------- 篩選 & 收藏
+  function currentFilters() {
+    return {
+      q: $('q').value,
+      brand: $('brand').value,
+      cur: $('cur-filter').value,
+      openOnly: $('open-only').checked,
+      favOnly: $('fav-only').checked
+    };
+  }
+  function filtersActive() {
+    var f = currentFilters();
+    return !!(f.q.trim() || f.brand !== 'all' || f.cur !== 'all' || f.openOnly || f.favOnly);
+  }
+  function clearFiltersBtn() {
+    return filtersActive() || $('area').value !== 'all'
+      ? '<br><button type="button" class="btn ghost" data-clear-filters>清除篩選條件</button>' : '';
+  }
+  function clearFilters() {
+    $('q').value = '';
+    $('brand').value = 'all';
+    $('cur-filter').value = 'all';
+    $('area').value = 'all';
+    $('open-only').checked = false;
+    $('fav-only').checked = false;
+    state.showAll = false;
+    renderNearby();
+  }
+  // 「可換台幣／美金」以這家分店實際有的匯率判斷；沒有匯率資料就無法確認，不列入
+  function hasCurrency(src, cur) {
+    if (!hasRate(src)) return false;
+    return cur === 'TWD' ? src.twdBuy > 0 : (src.usdBuy > 0 || C.usdTiersOf(src).length > 0);
+  }
+
+  function loadFavorites() {
+    state.favorites = C.parseFavorites(store.get('thb-favorites'));
+    renderFavCount();
+  }
+  function renderFavCount() {
+    $('fav-count').textContent = state.favorites.length ? '(' + state.favorites.length + ')' : '';
+  }
+  function favButtonHtml(b) {
+    var on = state.favorites.indexOf(b.id) >= 0;
+    return '<div><button type="button" class="fav" data-fav="' + esc(b.id) + '" aria-pressed="' + on + '" aria-label="' +
+      (on ? '取消收藏 ' : '收藏 ') + esc(b.brand + ' ' + b.branchName) + '">' + (on ? '★ 已收藏' : '☆ 收藏') + '</button></div>';
+  }
 
   // 可兌換貨幣：以這家分店實際有的匯率為準，沒有匯率資料時才用分店資料的欄位
   function currenciesOf(b, src) {
@@ -906,7 +993,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
           return true;
         });
         var cities = [];
-        branches.forEach(function (b) { if (b.city && cities.indexOf(b.city) < 0) cities.push(b.city); });
+        var brands = [];
+        branches.forEach(function (b) {
+          if (b.city && cities.indexOf(b.city) < 0) cities.push(b.city);
+          if (b.brand && brands.indexOf(b.brand) < 0) brands.push(b.brand);
+        });
+        $('brand').innerHTML = '<option value="all">全部品牌</option>' + brands.map(function (x) {
+          return '<option value="' + esc(x) + '">' + esc(x) + '</option>';
+        }).join('');
         $('area').innerHTML = '<option value="all">全部地區</option>' + cities.map(function (c) {
           return '<option value="' + esc(c) + '">' + esc(c) + '</option>';
         }).join('');
@@ -991,10 +1085,22 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     $(id).addEventListener('change', function () { state.showAll = false; renderNearby(); });
   });
   $('branches').addEventListener('click', function (e) {
+    var fav = e.target.closest('button[data-fav]');
+    if (fav) {
+      state.favorites = C.toggleFavorite(state.favorites, fav.dataset.fav);
+      store.set('thb-favorites', JSON.stringify(state.favorites));
+      renderFavCount();
+      renderNearby();
+      return;
+    }
     if (!e.target.closest('#show-all')) return;
     state.showAll = true;
     renderNearby();
   });
+  ['brand', 'cur-filter', 'open-only', 'fav-only'].forEach(function (id) {
+    $(id).addEventListener('change', function () { state.showAll = false; renderNearby(); });
+  });
+  $('q').addEventListener('input', function () { state.showAll = false; renderNearby(); });
   // 交通費在離開欄位 (change) 時才重新排序，避免輸入到一半清單跳動
   $('branches').addEventListener('change', function (e) {
     var input = e.target.closest('input[data-fare]');
@@ -1004,12 +1110,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     renderNearby();
   });
   $('geo-status').addEventListener('click', function (e) {
+    if (e.target.closest('button[data-clear-filters]')) { clearFilters(); return; }
     var btn = e.target.closest('button[data-radius]');
     if (!btn) return;
     $('radius').value = btn.dataset.radius;
     renderNearby();
   });
 
+  loadFavorites();
   loadBranches();
 
   fetch('data/rates.json', { cache: 'no-store' })

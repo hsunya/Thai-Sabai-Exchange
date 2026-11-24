@@ -227,6 +227,40 @@
     return { status: open ? 'open' : 'closed', today: today };
   }
 
+  // ---------------------------------------------------------------- 搜尋 & 收藏
+
+  // 關鍵字搜尋：比對品牌、分店名稱、地區、商場、地址；空白分隔的多個關鍵字須全部符合，不分大小寫
+  function matchesQuery(branch, query) {
+    var terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    var text = [branch.brand, branch.branchName, branch.city, branch.area, branch.address]
+      .filter(Boolean).join(' ').toLowerCase();
+    return terms.every(function (t) { return text.indexOf(t) >= 0; });
+  }
+
+  // 收藏清單 (localStorage 存的 JSON 字串) → 分店 id 陣列；格式錯誤時回傳空陣列。
+  // 只存分店 id，不存任何位置資訊。
+  function parseFavorites(raw) {
+    try {
+      var list = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+      var seen = {};
+      return list.filter(function (id) {
+        if (typeof id !== 'string' || !id || id.length > 100 || seen[id]) return false;
+        seen[id] = true;
+        return true;
+      }).slice(0, 500);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function toggleFavorite(list, id) {
+    return list.indexOf(id) >= 0
+      ? list.filter(function (x) { return x !== id; })
+      : list.concat([id]);
+  }
+
   // ---------------------------------------------------------------- 資料新鮮度
 
   // 資料產生後經過的分鐘數；時間無法解析回傳 null
@@ -257,6 +291,9 @@
     isValidCoord: isValidCoord,
     haversineKm: haversineKm,
     directionsUrl: directionsUrl,
-    placeUrl: placeUrl
+    placeUrl: placeUrl,
+    matchesQuery: matchesQuery,
+    parseFavorites: parseFavorites,
+    toggleFavorite: toggleFavorite
   };
 });
