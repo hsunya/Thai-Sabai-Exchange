@@ -180,7 +180,63 @@
     return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(lat + ',' + lng);
   }
 
+  // ---------------------------------------------------------------- 營業時間
+
+  var WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+  // 某個時間點在泰國的星期與當日分鐘數 → { day: 'monday', minutes: 545 }
+  function bangkokClock(date) {
+    var parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Bangkok', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(date);
+    var get = function (type) {
+      for (var i = 0; i < parts.length; i++) if (parts[i].type === type) return parts[i].value;
+      return '';
+    };
+    var hour = Number(get('hour')) % 24; // 部分瀏覽器午夜會輸出 "24"
+    return { day: get('weekday').toLowerCase(), minutes: hour * 60 + Number(get('minute')) };
+  }
+
+  // "09:00-18:00" → { from: 540, to: 1080 }；"05:00-24:00" → to = 1440
+  function parseHoursRange(text) {
+    var m = /^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/.exec(String(text || '').trim());
+    if (!m) return null;
+    var from = Number(m[1]) * 60 + Number(m[2]);
+    var to = Number(m[3]) * 60 + Number(m[4]);
+    if (from > 1440 || to > 1440) return null;
+    return { from: from, to: to };
+  }
+
+  // 依查證過的營業時間判斷是否營業中 → { status: 'open' | 'closed' | 'unknown', today: 當日字串或 null }
+  // 沒有營業時間資料、或當天資料缺漏／格式錯誤時一律回傳 unknown，不推測。
+  function openStatus(hours, date) {
+    if (!hours || typeof hours !== 'object') return { status: 'unknown', today: null };
+    var clock = bangkokClock(date || new Date());
+    var today = hours[clock.day];
+    if (today === 'closed') return { status: 'closed', today: 'closed' };
+    var range = parseHoursRange(today);
+    if (!range) return { status: 'unknown', today: today || null };
+    var open = range.to > range.from
+      ? clock.minutes >= range.from && clock.minutes < range.to
+      : clock.minutes >= range.from || clock.minutes < range.to; // 跨午夜
+    return { status: open ? 'open' : 'closed', today: today };
+  }
+
+  // ---------------------------------------------------------------- 資料新鮮度
+
+  // 資料產生後經過的分鐘數；時間無法解析回傳 null
+  function ageMinutes(iso, now) {
+    var t = Date.parse(iso);
+    if (!Number.isFinite(t)) return null;
+    return Math.max(0, ((now || new Date()).getTime() - t) / 60000);
+  }
+
   return {
+    WEEKDAYS: WEEKDAYS,
+    bangkokClock: bangkokClock,
+    parseHoursRange: parseHoursRange,
+    openStatus: openStatus,
+    ageMinutes: ageMinutes,
     USD_BILLS: USD_BILLS,
     TWD_MIN_BILL: TWD_MIN_BILL,
     MAX_AMOUNT: MAX_AMOUNT,

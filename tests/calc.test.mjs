@@ -219,3 +219,52 @@ test('exchange-shops.json：id 唯一、座標有效、對應到 rates.json 的�
     assert.ok(b.openingHours === null || typeof b.openingHours === 'object');
   }
 });
+
+// ---------------------------------------------------------------- 營業時間 & 資料新鮮度
+
+const SR_HOURS = {
+  monday: '09:00-18:00', tuesday: '09:00-18:00', wednesday: '09:00-18:00', thursday: '09:00-18:00',
+  friday: '09:00-18:00', saturday: '09:30-17:00', sunday: 'closed',
+};
+const ALL_DAY = Object.fromEntries(C.WEEKDAYS.map((d) => [d, '05:00-24:00']));
+
+test('bangkokClock：換算成泰國時間 (UTC+7)', () => {
+  // 2026-11-24 03:00 UTC = 週二 10:00 泰國時間
+  assert.deepEqual(C.bangkokClock(new Date('2026-11-24T03:00:00Z')), { day: 'tuesday', minutes: 600 });
+  // 2026-11-24 17:30 UTC = 週三 00:30 泰國時間 (跨日)
+  assert.deepEqual(C.bangkokClock(new Date('2026-11-24T17:30:00Z')), { day: 'wednesday', minutes: 30 });
+});
+
+test('parseHoursRange', () => {
+  assert.deepEqual(C.parseHoursRange('09:00-18:00'), { from: 540, to: 1080 });
+  assert.deepEqual(C.parseHoursRange('05:00 - 24:00'), { from: 300, to: 1440 });
+  assert.equal(C.parseHoursRange('closed'), null);
+  assert.equal(C.parseHoursRange('9am-6pm'), null);
+  assert.equal(C.parseHoursRange(null), null);
+});
+
+test('openStatus：依泰國時間判斷營業中／未營業', () => {
+  assert.deepEqual(C.openStatus(SR_HOURS, new Date('2026-11-24T03:00:00Z')), { status: 'open', today: '09:00-18:00' });   // 週二 10:00
+  assert.equal(C.openStatus(SR_HOURS, new Date('2026-11-24T11:00:00Z')).status, 'closed');  // 週二 18:00 剛打烊
+  assert.equal(C.openStatus(SR_HOURS, new Date('2026-11-24T01:59:00Z')).status, 'closed'); // 週二 08:59
+  assert.deepEqual(C.openStatus(SR_HOURS, new Date('2026-11-29T05:00:00Z')), { status: 'closed', today: 'closed' });   // 週日公休
+  assert.equal(C.openStatus(ALL_DAY, new Date('2026-11-24T16:59:00Z')).status, 'open');   // 23:59
+  assert.equal(C.openStatus(ALL_DAY, new Date('2026-11-24T17:30:00Z')).status, 'closed'); // 00:30
+  assert.equal(C.openStatus({ monday: '22:00-02:00' }, new Date('2026-11-23T16:00:00Z')).status, 'open'); // 週一 23:00，跨午夜的時段
+});
+
+test('openStatus：沒有資料或格式不明時一律 unknown，不推測營業中', () => {
+  const tue10 = new Date('2026-11-24T03:00:00Z');
+  assert.equal(C.openStatus(null, tue10).status, 'unknown');
+  assert.equal(C.openStatus({ monday: '09:00-18:00' }, tue10).status, 'unknown');
+  assert.equal(C.openStatus({ tuesday: '營業' }, tue10).status, 'unknown');
+});
+
+test('ageMinutes：資料經過時間', () => {
+  const now = new Date('2026-11-24T10:00:00Z');
+  assert.equal(C.ageMinutes('2026-11-24T09:30:00Z', now), 30);
+  assert.equal(C.ageMinutes('2026-11-24T07:00:00Z', now), 180);
+  assert.equal(C.ageMinutes('2026-11-24T11:00:00Z', now), 0);
+  assert.equal(C.ageMinutes('not a date', now), null);
+  assert.equal(C.ageMinutes(null, now), null);
+});

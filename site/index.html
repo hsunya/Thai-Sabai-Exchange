@@ -217,11 +217,22 @@ details.err summary { cursor: pointer; }
 .branch-info dt { color: var(--muted); }
 .branch-info dd { margin: 0; min-width: 0; }
 .branch-info .unknown { color: var(--warn); }
+.open-badge { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+.open-badge.open { background: var(--accent-soft); color: var(--accent); }
+.open-badge.closed { background: var(--surface-2); color: var(--muted); }
+details.week { font-size: 13px; color: var(--muted); }
+details.week summary { cursor: pointer; }
+.fare { display: inline-flex; align-items: center; gap: 6px; }
+.fare input {
+  width: 90px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text);
+  font: inherit; padding: 2px 8px;
+}
 .branch-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; }
 .branch-actions .btn { font-size: 14px; padding: 6px 12px; }
 
 /* ---------- misc ---------- */
 .banner { padding: 12px 16px; border-radius: 12px; background: var(--bad-bg); color: var(--bad); margin-bottom: 18px; }
+.banner.warn { background: var(--warn-bg); color: var(--warn); }
 .info { font-size: 14px; color: var(--muted); }
 .info h2 { color: var(--text); font-size: 16px; }
 .info ul { margin: 0; padding-left: 20px; }
@@ -306,6 +317,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         <select id="sort">
           <option value="distance" disabled>距離最近</option>
           <option value="thb" selected>預估換得泰銖最多</option>
+          <option value="open">目前營業中優先</option>
         </select>
       </label>
       <label>地區
@@ -314,7 +326,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     </div>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite">尚未定位。下方列出所有已收錄的分店。</p>
     <ul class="branches" id="branches"></ul>
-    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。目前只收錄有匯率資料的地點；營業時間尚未查證，出發前請以 Google Maps 或店家公告為準。</p>
+    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。目前只收錄有匯率資料的地點。營業時間取自各家官網，「營業中」依泰國時間的一般營業時間判斷，國定假日或臨時公休可能不同，出發前請再確認。交通費只計入你自己填寫的金額。</p>
   </section>
 
   <section class="panel info">
@@ -380,6 +392,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     shopBest: {},          // 每家兌換所在目前輸入下的最佳預估 { thb, how }
     // 定位：只存在記憶體，不寫入 localStorage / Cookie / URL
     pos: null,             // { lat, lng, accuracy }
+    fares: {},             // 使用者自填的交通費 (泰銖)，key 為分店 id；只存在記憶體
     geo: 'idle',           // idle | locating | ok | denied | timeout | unsupported | insecure | unavailable
     branchError: null
   };
@@ -678,13 +691,19 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     var pos = state.pos;
     var sort = pos ? $('sort').value : 'thb';
 
+    var now = new Date();
     var items = branches
       .filter(function (b) { return area === 'all' || b.city === area; })
       .map(function (b) {
+        var est = state.shopBest[b.rateSource] || null;
+        var fare = state.fares[b.id] || 0;
         return {
           b: b,
           dist: pos ? C.haversineKm(pos.lat, pos.lng, b.latitude, b.longitude) : null,
-          est: state.shopBest[b.rateSource] || null
+          est: est,
+          fare: fare,
+          net: est ? est.thb - fare : null,
+          open: C.openStatus(b.openingHours, now)
         };
       });
 
@@ -693,9 +712,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
       shown = items.filter(function (it) { return it.dist <= Number(radius); });
     }
 
+    var OPEN_RANK = { open: 0, unknown: 1, closed: 2 };
+    var byThb = function (x, y) { return (y.net != null ? y.net : -Infinity) - (x.net != null ? x.net : -Infinity); };
     shown.sort(function (x, y) {
       if (sort === 'distance') return x.dist - y.dist;
-      return (y.est ? y.est.thb : -1) - (x.est ? x.est.thb : -1);
+      if (sort === 'open') {
+        return (OPEN_RANK[x.open.status] - OPEN_RANK[y.open.status]) || (pos ? x.dist - y.dist : byThb(x, y));
+      }
+      return byThb(x, y);
     });
 
     // 狀態列
@@ -730,11 +754,16 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         ? '<span class="num">' + fmtTHB(it.est.thb) + '</span>（' + esc(it.est.how) + '）' + (src && src.stale ? '・<span class="unknown">匯率為沿用資料</span>' : '')
         : '<span class="unknown">' + (data ? '請先在上方輸入金額' : '匯率載入中') + '</span>';
       var compare = '';
-      if (nearestShown && it !== nearestShown && it.est && nearestShown.est) {
-        var diff = it.est.thb - nearestShown.est.thb;
+      if (nearestShown && it !== nearestShown && it.net != null && nearestShown.net != null) {
+        var diff = it.net - nearestShown.net;
+        var fareKnown = it.fare > 0 || nearestShown.fare > 0;
         compare = '<div><dt>比最近分店</dt><dd class="num">' + (Math.round(diff) === 0 ? '差不多' : (diff > 0 ? '多 ' : '少 ') + fmtTHB(Math.abs(diff)).replace('฿ ', '฿')) +
-          '（相對 ' + esc(nearestShown.b.brand) + '，未計交通費）</dd></div>';
+          '（相對 ' + esc(nearestShown.b.brand) + '，' + (fareKnown ? '已扣除你填的交通費' : '未計交通費') + '）</dd></div>';
       }
+      var fareHtml = it.est
+        ? '<div><dt>交通費</dt><dd><label class="fare">฿ <input class="num" type="number" inputmode="numeric" min="0" step="10" placeholder="選填" data-fare="' + esc(b.id) + '" value="' + (it.fare > 0 ? it.fare : '') + '" aria-label="到 ' + esc(b.brand + ' ' + b.branchName) + ' 的來回交通費（泰銖）"></label>' +
+          (it.fare > 0 ? ' → 扣除後 <span class="num">' + fmtTHB(it.net) + '</span>' : '') + '</dd></div>'
+        : '';
       return '<li class="branch">' +
         '<div class="branch-head"><span class="logo">' + esc(shop.logo) + '</span>' +
           '<div><b>' + esc(b.brand) + '・' + esc(b.branchName) + '</b><small>' + esc(b.city) + '・' + esc(b.area) + '</small></div>' +
@@ -742,11 +771,13 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         '</div>' +
         '<dl class="branch-info">' +
           '<div><dt>預估可換</dt><dd>' + estHtml + '</dd></div>' +
+          fareHtml +
           compare +
           '<div><dt>兌換貨幣</dt><dd>' + esc((b.supportedCurrencies || []).join('、') || '未確認') + '</dd></div>' +
           '<div><dt>匯率範圍</dt><dd>' + esc(b.rateScopeNote || '未確認') + '</dd></div>' +
           '<div><dt>地址</dt><dd>' + (b.address ? esc(b.address) : '<span class="unknown">地址未查證，請以地圖為準</span>') + '</dd></div>' +
-          '<div><dt>營業時間</dt><dd>' + (b.openingHours ? esc(formatHours(b.openingHours)) : '<span class="unknown">營業資訊未確認</span>') + '</dd></div>' +
+          (b.phone ? '<div><dt>電話</dt><dd class="num">' + esc(b.phone) + '</dd></div>' : '') +
+          '<div><dt>營業時間</dt><dd>' + hoursHtml(b, it.open) + '</dd></div>' +
           '<div><dt>資料查證</dt><dd>' + esc(b.lastVerifiedAt || '未查證') + '</dd></div>' +
         '</dl>' +
         '<div class="branch-actions">' +
@@ -758,9 +789,18 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   }
 
   var DAYS = { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' };
-  function formatHours(hours) {
-    return Object.keys(DAYS).filter(function (d) { return hours[d]; })
-      .map(function (d) { return '週' + DAYS[d] + ' ' + hours[d]; }).join('、');
+  var hoursText = function (h) { return h === 'closed' ? '公休' : h; };
+  function hoursHtml(b, open) {
+    if (!b.openingHours) return '<span class="unknown">營業資訊未確認</span>';
+    var today = open.status === 'unknown'
+      ? '<span class="unknown">今日營業時間未確認</span>'
+      : '今天 ' + esc(hoursText(open.today)) +
+        '<span class="open-badge ' + open.status + '">' + (open.status === 'open' ? '● 營業中' : '○ 未營業') + '</span>';
+    var week = Object.keys(DAYS).map(function (d) {
+      return '週' + DAYS[d] + ' ' + esc(b.openingHours[d] ? hoursText(b.openingHours[d]) : '未確認');
+    }).join('<br>');
+    return today + '<details class="week"><summary>每週營業時間（泰國時間）</summary>' + week +
+      (b.openingHoursNote ? '<br>' + esc(b.openingHoursNote) : '') + '</details>';
   }
 
   function setLocatedUi() {
@@ -822,14 +862,28 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
       });
   }
 
+  // 排程每 30 分鐘更新一次；超過 2 小時沒更新代表排程停擺 (例如 repo 60 天沒有 commit 被 GitHub 停用)
+  var STALE_AFTER_MIN = 120;
+  function fmtAge(min) {
+    return min < 60 * 24 ? Math.floor(min / 60) + ' 小時' : Math.floor(min / 60 / 24) + ' 天';
+  }
+
   function renderFresh() {
     var list = [BOT].concat(SHOPS);
     var failed = list.filter(function (s) { var src = data.sources[s.key]; return !src || !src.ok; });
+    var age = C.ageMinutes(data.generatedAt);
+    var old = age != null && age > STALE_AFTER_MIN;
     $('fresh').innerHTML =
-      '<span>資料更新：<b class="num">' + esc(twTime(data.generatedAt, true)) + '</b>（台灣時間）</span>' +
-      (failed.length
+      '<span>資料抓取：<b class="num">' + esc(twTime(data.generatedAt, true)) + '</b>（台灣時間）</span>' +
+      (old ? '' : failed.length
         ? '<span>⚠ ' + failed.map(function (s) { return s.name; }).join('、') + ' 本次未更新</span>'
         : '<span>4 個來源皆為最新</span>');
+    if (old) {
+      var banner = $('banner');
+      banner.hidden = false;
+      banner.className = 'banner warn';
+      banner.textContent = '⚠ 匯率資料已超過 ' + fmtAge(age) + '沒有更新，以下不是即時匯率，僅供參考。各家公告時間請見下方卡片。';
+    }
   }
 
   // ---------------------------------------------------------------- 啟動
@@ -878,6 +932,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     renderNearby();
   });
   ['radius', 'sort', 'area'].forEach(function (id) { $(id).addEventListener('change', renderNearby); });
+  // 交通費在離開欄位 (change) 時才重新排序，避免輸入到一半清單跳動
+  $('branches').addEventListener('change', function (e) {
+    var input = e.target.closest('input[data-fare]');
+    if (!input) return;
+    var v = Number(input.value);
+    state.fares[input.dataset.fare] = Number.isFinite(v) && v > 0 ? Math.min(v, 1e6) : 0;
+    renderNearby();
+  });
   $('geo-status').addEventListener('click', function (e) {
     var btn = e.target.closest('button[data-radius]');
     if (!btn) return;
