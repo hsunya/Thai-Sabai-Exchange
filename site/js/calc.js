@@ -180,6 +180,11 @@
     return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(lat + ',' + lng);
   }
 
+  // 官方資料沒有 Google Maps 地點連結時，用座標開啟地圖 (只是座標標記，不是店家地點頁)
+  function placeUrl(lat, lng) {
+    return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lat + ',' + lng);
+  }
+
   // ---------------------------------------------------------------- 營業時間
 
   var WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -251,6 +256,7 @@
     twdViaUsd: twdViaUsd,
     isValidCoord: isValidCoord,
     haversineKm: haversineKm,
-    directionsUrl: directionsUrl
+    directionsUrl: directionsUrl,
+    placeUrl: placeUrl
   };
 });

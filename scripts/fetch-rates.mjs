@@ -7,6 +7,10 @@
 //
 // 某個來源失敗時保留上一次成功的數值 (stale)，並記錄失敗原因，不會讓整頁變成空白。
 // 上一次的資料來源：環境變數 PREVIOUS_RATES_URL (已部署的 rates.json) 或本機現有的 rates.json。
+//
+// 輸出兩部分：
+//   sources      四個代表來源 (換算排名用，與舊版格式相同)
+//   branchRates  site/data/exchange-shops.json 各分店 rateKey 對應的分店匯率 (附近兌換所用)
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -14,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = join(ROOT, 'site', 'data', 'rates.json');
+const SHOPS_FILE = join(ROOT, 'site', 'data', 'exchange-shops.json');
+const BRANCH_CONCURRENCY = 4; // 分店匯率同時請求數，避免對官方 API 造成負擔
 const TIMEOUT_MS = 15000;
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -35,6 +41,34 @@ function parseJson(body, name) {
   } catch {
     throw new Error(`${name} 回應不是 JSON：${body.slice(0, 120)}`);
   }
+}
+
+// 分店匯率用：沒有或不是有效數字時回傳 null，不讓整筆失敗
+function optNumber(value) {
+  const n = typeof value === 'number' ? value : parseFloat(String(value ?? '').replace(/,/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+// strict (代表來源)：USD、TWD 都必須有；非 strict (分店)：至少要有一種
+function pickRates(usd, twd, strict, label) {
+  if (strict) {
+    if (!usd || !twd) throw new Error(`找不到 ${label}`);
+    return { usdBuy: toNumber(usd.buy, 'USD 買價'), twdBuy: toNumber(twd.buy, 'TWD 買價') };
+  }
+  const usdBuy = optNumber(usd?.buy);
+  const twdBuy = optNumber(twd?.buy);
+  if (usdBuy == null && twdBuy == null) throw new Error(`沒有 USD 或 TWD 匯率`);
+  return { usdBuy, twdBuy };
+}
+
+async function mapLimit(items, limit, fn) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      await fn(items[i], i);
+    }
+  }));
 }
 
 function toNumber(value, label) {
@@ -87,7 +121,7 @@ function describeError(err) {
 // ---------------------------------------------------------------- 各來源
 
 // 蘇凡納布機場 Happy Rich (Location 32)
-async function fetchHappyRich() {
+async function fetchHappyRich(location = '32', { strict = true } = {}) {
   const body = await request('https://www.happyrich.co.th/Rate/GetRateService', {
     method: 'POST',
     headers: {
@@ -96,29 +130,27 @@ async function fetchHappyRich() {
       'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
     },
-    body: new URLSearchParams({ Language: 'TH', Location: '32' }),
+    body: new URLSearchParams({ Language: 'TH', Location: String(location) }),
   });
   const json = parseJson(body, 'Happy Rich');
   const list = Array.isArray(json?.data) ? json.data : [];
   // id 2 = 美金 (100 面額)、id 87 = 台幣
   const usd = list.find((d) => d.id === 2);
   const twd = list.find((d) => d.id === 87);
-  if (!usd || !twd) {
-    throw new Error('找不到 USD (id=2) 或 TWD (id=87)');
-  }
+  const rates = pickRates(usd && { buy: usd.buyPrice }, twd && { buy: twd.buyPrice }, strict, 'USD (id=2) 或 TWD (id=87)');
 
   // update_str 是泰國佛曆：dd/MM/yyyy HH:mm:ss，年份減 543 = 西元
-  let updatedAt = usd.update_str ?? null;
-  const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(usd.update_str ?? '');
+  const stamp = (usd ?? twd)?.update_str ?? null;
+  let updatedAt = stamp;
+  const m = /^(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2})/.exec(stamp ?? '');
   if (m) {
     updatedAt = `${Number(m[3]) - 543}-${m[2]}-${m[1]} ${m[4]}:${m[5]}`;
   }
 
   return {
-    usdBuy: toNumber(usd.buyPrice, 'USD 買價'),
-    twdBuy: toNumber(twd.buyPrice, 'TWD 買價'),
-    usdDenom: normalizeDenom(usd.currencyDenom),
-    twdDenom: normalizeDenom(twd.currencyDenom),
+    ...rates,
+    usdDenom: normalizeDenom(usd?.currencyDenom),
+    twdDenom: normalizeDenom(twd?.currencyDenom),
     usdTiers: buildUsdTiers(list
       .filter((d) => d.currencyCode === 'USD')
       .map((d) => ({ denom: d.currencyDenom, buy: d.buyPrice }))),
@@ -126,9 +158,9 @@ async function fetchHappyRich() {
   };
 }
 
-// 曼谷水門市場 Super Rich (總行 H01，branchId=10)
-async function fetchSuperRich() {
-  const body = await request('https://api.superrichthailand.com/api/v1/exchange-client/list?branchId=10&type=exchange', {
+// 曼谷水門市場 Super Rich (總行 H01，branchId=10)；其他分店傳入 branchId
+async function fetchSuperRich(branchId = 10, { strict = true } = {}) {
+  const body = await request(`https://api.superrichthailand.com/api/v1/exchange-client/list?branchId=${encodeURIComponent(branchId)}&type=exchange`, {
     headers: { 'Accept': 'application/json' },
   });
   const json = parseJson(body, 'Super Rich');
@@ -146,50 +178,46 @@ async function fetchSuperRich() {
   };
   const usd = largest('USD');
   const twd = largest('TWD');
-  if (!usd || !twd) {
-    throw new Error('找不到 USD 或 TWD');
-  }
+  const rates = pickRates(usd && { buy: usd.buyText }, twd && { buy: twd.buyText }, strict, 'USD 或 TWD');
 
   // time.time 是當日每次調價的時間 (泰國時間)，取最晚的一筆
   const times = (json.data.time?.time ?? []).filter(Boolean).sort();
   const latest = times[times.length - 1];
 
   return {
-    usdBuy: toNumber(usd.buyText, 'USD 買價'),
-    twdBuy: toNumber(twd.buyText, 'TWD 買價'),
-    usdDenom: normalizeDenom(usd.denomRem),
-    twdDenom: normalizeDenom(twd.denomRem),
+    ...rates,
+    usdDenom: normalizeDenom(usd?.denomRem),
+    twdDenom: normalizeDenom(twd?.denomRem),
     usdTiers: buildUsdTiers((exchange.USD ?? []).map((r) => ({ denom: r.denomRem, buy: r.buyText }))),
     updatedAt: json.data.time?.date ? `${json.data.time.date}${latest ? ' ' + latest : ''}` : null,
   };
 }
 
-// 芭達雅 Terminal 21 T.T. Exchange
-async function fetchTT() {
+// 芭達雅 Terminal 21 T.T. Exchange (branch_id=21)；其他分店傳入 branchId。
+// 分店匯率不另外請求更新時間 (減少請求數)，updatedAt 為 null，網頁改顯示抓取時間。
+async function fetchTT(branchId = 21, { strict = true, withTime = true } = {}) {
+  const id = encodeURIComponent(branchId);
   const [ratesBody, timeBody] = await Promise.all([
-    request('https://api.software.ttexchange.com/currencies?is_main=false&branch_id=21'),
-    request('https://api.software.ttexchange.com/currencies/updated_at?branch_id=21'),
+    request(`https://api.software.ttexchange.com/currencies?is_main=false&branch_id=${id}`),
+    withTime ? request(`https://api.software.ttexchange.com/currencies/updated_at?branch_id=${id}`) : null,
   ]);
   const list = parseJson(ratesBody, 'TT Exchange');
   // id 1 = USD(L) 100-50、id 2 = USD(M) 20-5、id 3 = USD(S) 2-1、id 25 = TWD
   const usd = Array.isArray(list) ? list.find((d) => d.id === 1) : null;
   const twd = Array.isArray(list) ? list.find((d) => d.id === 25) : null;
-  if (!usd || !twd) {
-    throw new Error('找不到 USD (id=1) 或 TWD (id=25)');
-  }
+  const rates = pickRates(usd && { buy: usd.current_buy_rate }, twd && { buy: twd.current_buy_rate }, strict, 'USD (id=1) 或 TWD (id=25)');
 
   // updated_at 例如 2026-11-24T14:06:00.586+07:00，直接取泰國當地時間
-  const updated = parseJson(timeBody, 'TT Exchange 更新時間')?.updated_at ?? '';
+  const updated = timeBody ? parseJson(timeBody, 'TT Exchange 更新時間')?.updated_at ?? '' : '';
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(updated);
 
   return {
-    usdBuy: toNumber(usd.current_buy_rate, 'USD 買價'),
-    twdBuy: toNumber(twd.current_buy_rate, 'TWD 買價'),
-    usdDenom: normalizeDenom(usd.description),
-    twdDenom: normalizeDenom(twd.description),
-    usdTiers: buildUsdTiers(list
+    ...rates,
+    usdDenom: normalizeDenom(usd?.description),
+    twdDenom: normalizeDenom(twd?.description),
+    usdTiers: usd ? buildUsdTiers(list
       .filter((d) => d.currency_group_id === usd.currency_group_id)
-      .map((d) => ({ denom: d.description, buy: d.current_buy_rate }))),
+      .map((d) => ({ denom: d.description, buy: d.current_buy_rate }))) : [],
     updatedAt: m ? `${m[1]} ${m[2]}` : updated || null,
   };
 }
@@ -234,11 +262,30 @@ async function fetchBankOfTaiwan() {
 // ---------------------------------------------------------------- 主程式
 
 const SOURCES = {
-  happyrich: fetchHappyRich,
-  superrich: fetchSuperRich,
-  tt: fetchTT,
+  happyrich: () => fetchHappyRich(),
+  superrich: () => fetchSuperRich(),
+  tt: () => fetchTT(),
   bot: fetchBankOfTaiwan,
 };
+
+// 分店匯率：rateKey = "<品牌>:<分店代碼>"
+const BRANCH_FETCHERS = {
+  superrich: (id) => fetchSuperRich(id, { strict: false }),
+  tt: (id) => fetchTT(id, { strict: false, withTime: false }),
+  happyrich: (id) => fetchHappyRich(id, { strict: false }),
+};
+// 與代表來源相同的分店直接沿用，不重複請求
+const SAME_AS_SOURCE = { 'superrich:10': 'superrich', 'tt:21': 'tt', 'happyrich:32': 'happyrich' };
+
+async function loadRateKeys() {
+  try {
+    const shops = JSON.parse(await readFile(SHOPS_FILE, 'utf8'));
+    return [...new Set((shops.branches ?? []).map((b) => b.rateKey).filter(Boolean))].sort();
+  } catch (err) {
+    console.log(`讀取分店資料失敗，略過分店匯率 (${describeError(err)})`);
+    return [];
+  }
+}
 
 async function loadPrevious() {
   const url = process.env.PREVIOUS_RATES_URL;
@@ -282,6 +329,36 @@ await Promise.all(Object.entries(SOURCES).map(async ([key, fetcher]) => {
 
 // 固定輸出順序
 result.sources = Object.fromEntries(Object.keys(SOURCES).map((k) => [k, result.sources[k]]));
+
+// ---------------------------------------------------------------- 分店匯率
+const rateKeys = await loadRateKeys();
+const branchRates = {};
+let branchOk = 0;
+let branchFail = 0;
+await mapLimit(rateKeys, BRANCH_CONCURRENCY, async (key) => {
+  if (SAME_AS_SOURCE[key]) {
+    branchRates[key] = result.sources[SAME_AS_SOURCE[key]];
+    return;
+  }
+  const [brand, id] = key.split(':');
+  const fetcher = BRANCH_FETCHERS[brand];
+  const prev = previous?.branchRates?.[key];
+  try {
+    if (!fetcher || !id) throw new Error(`不支援的 rateKey：${key}`);
+    const data = await fetcher(id);
+    branchRates[key] = { ok: true, stale: false, ...data, fetchedAt: now, lastSuccessAt: now, error: null };
+    branchOk++;
+  } catch (err) {
+    const error = describeError(err);
+    console.log(`FAIL  branch ${key}  ${error}`);
+    branchFail++;
+    branchRates[key] = prev?.lastSuccessAt
+      ? { ...prev, ok: false, stale: true, fetchedAt: now, error }
+      : { ok: false, stale: false, fetchedAt: now, lastSuccessAt: null, error };
+  }
+});
+result.branchRates = Object.fromEntries(rateKeys.map((k) => [k, branchRates[k]]));
+console.log(`分店匯率：${rateKeys.length} 個 (成功 ${branchOk}、失敗 ${branchFail}、沿用代表來源 ${rateKeys.filter((k) => SAME_AS_SOURCE[k]).length})`);
 
 await mkdir(dirname(OUTPUT), { recursive: true });
 await writeFile(OUTPUT, JSON.stringify(result, null, 2) + '\n', 'utf8');

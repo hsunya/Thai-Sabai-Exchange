@@ -326,7 +326,7 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     </div>
     <p class="geo-status" id="geo-status" role="status" aria-live="polite">尚未定位。下方列出所有已收錄的分店。</p>
     <ul class="branches" id="branches"></ul>
-    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。目前只收錄有匯率資料的地點。營業時間取自各家官網，「營業中」依泰國時間的一般營業時間判斷，國定假日或臨時公休可能不同，出發前請再確認。交通費只計入你自己填寫的金額。</p>
+    <p class="note">距離為<b>直線距離</b>，不是步行或開車路線距離，也不代表交通時間。收錄 Super Rich、T.T. Exchange 官方公布的分店與 Happy Rich 蘇凡納布分店，每家分店使用自己的公告匯率估算。營業時間取自各家官方資料，「營業中」依泰國時間的一般營業時間判斷，國定假日或臨時公休可能不同，出發前請再確認。交通費只計入你自己填寫的金額。</p>
   </section>
 
   <section class="panel info">
@@ -389,7 +389,8 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     amounts: { TWD: CURRENCIES.TWD.def, USD: CURRENCIES.USD.def },
     usdCounts: C.splitUsdBills(Number(CURRENCIES.USD.def)),
     usdCustom: false,      // 使用者自行輸入了鈔票張數
-    shopBest: {},          // 每家兌換所在目前輸入下的最佳預估 { thb, how }
+    input: null,           // 目前有效的輸入 { cur: 'TWD', twd } 或 { cur: 'USD', counts }；無效時為 null
+    showAll: false,        // 附近分店清單是否展開全部
     // 定位：只存在記憶體，不寫入 localStorage / Cookie / URL
     pos: null,             // { lat, lng, accuracy }
     fares: {},             // 使用者自填的交通費 (泰銖)，key 為分店 id；只存在記憶體
@@ -418,7 +419,6 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     return m ? m[1] + '/' + m[2] + ' ' + m[3] : (s || '—');
   };
   var hasRate = function (src) { return src && (src.ok || src.stale); };
-  var shopByKey = function (key) { return SHOPS.filter(function (s) { return s.key === key; })[0]; };
   var store = {
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { /* 無痕模式等情況忽略 */ } }
@@ -477,62 +477,85 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
   }
 
   // ---------------------------------------------------------------- 換算方案
-  // 每個方案：{ key, who, how, place, thb (null = 無法計算), detail, warn }
+  // routesFor(src)：某個匯率來源 (代表來源或分店) 在目前輸入下的各種換法
+  //   → [{ how, thb (null = 無法計算), detail, warn }]
 
-  function twdOptions(twd) {
+  function routesFor(src) {
+    var input = state.input;
+    if (!input) return [];
+    var ok = hasRate(src);
+    if (input.cur === 'TWD') return twdRoutes(src, ok, input.twd);
+    return [usdRoute(src, ok, input.counts)];
+  }
+
+  function twdRoutes(s, ok, twd) {
     var bot = data.sources[BOT.key];
     var usdSell = hasRate(bot) ? bot.usdCashSell : 0;
+    var routes = [];
+    var d = ok ? C.twdDirect(twd, s.twdBuy) : null;
+    routes.push({
+      how: '直接換台幣',
+      thb: d ? d.thb : null,
+      detail: d ? '1 台幣 = ' + s.twdBuy + ' 泰銖' + (d.twdLeft > 0 ? '・零頭 NT$' + fmtInt(d.twdLeft) + ' 不計' : '') : (ok ? '沒有台幣匯率' : '暫無資料')
+    });
+
+    var v = ok ? C.twdViaUsd(twd, usdSell, C.usdTiersOf(s), s.twdBuy) : { ok: false, reason: 'no-rate' };
+    var detail;
+    if (v.ok) {
+      detail = '台銀買 US$' + fmtInt(v.usd) + '（NT$' + fmtInt(v.twdSpent) + '）× ' + v.rate100;
+      if (v.twdRemainderExchanged > 0) detail += '＋剩 NT$' + fmtInt(v.twdRemainderExchanged) + ' 直接換';
+      if (v.twdLeft >= 1) detail += '・NT$' + fmtInt(v.twdLeft) + ' 未換';
+    } else if (v.reason === 'not-enough') {
+      detail = '金額不足 1 張 US$100（約需 NT$' + fmtInt(v.costPerBill) + '）';
+    } else if (v.reason === 'no-bot') {
+      detail = '臺灣銀行暫無資料';
+    } else if (v.reason === 'no-usd-rate') {
+      detail = '沒有美金 100 元匯率';
+    } else {
+      detail = '暫無資料';
+    }
+      routes.push({ how: '經台銀換美金', thb: v.ok ? v.thb : null, detail: detail });
+    return routes;
+  }
+
+  function usdRoute(s, ok, counts) {
+    var r = ok ? C.usdBillsToThb(counts, C.usdTiersOf(s)) : null;
+    if (!r || r.usdCounted === 0) {
+      return { how: '直接換美金', thb: null, detail: ok ? '沒有對應面額的匯率資料' : '暫無資料' };
+    }
+    return {
+      how: '直接換美金',
+      thb: r.thb,
+      detail: r.lines.map(function (l) { return '$' + l.bill + '×' + l.count + ' @' + l.rate; }).join('、'),
+      warn: r.usdMissing > 0
+        ? 'US$' + fmtInt(r.usdMissing) + '（' + r.missingBills.map(function (b) { return b + ' 元'; }).join('、') + '鈔）沒有面額匯率，未計入'
+        : null
+    };
+  }
+
+  // 排名用：三家代表來源的所有換法
+  function rankingOptions() {
     var options = [];
     SHOPS.forEach(function (shop) {
-      var s = data.sources[shop.key];
-      var ok = hasRate(s);
-
-      var d = ok ? C.twdDirect(twd, s.twdBuy) : null;
-      options.push({
-        key: shop.key, who: shop.name, how: '直接換台幣', place: shop.place,
-        thb: d ? d.thb : null,
-        detail: d ? '1 台幣 = ' + s.twdBuy + ' 泰銖' + (d.twdLeft > 0 ? '・零頭 NT$' + fmtInt(d.twdLeft) + ' 不計' : '') : '暫無資料'
-      });
-
-      var v = ok ? C.twdViaUsd(twd, usdSell, C.usdTiersOf(s), s.twdBuy) : { ok: false, reason: 'no-rate' };
-      var detail;
-      if (v.ok) {
-        detail = '台銀買 US$' + fmtInt(v.usd) + '（NT$' + fmtInt(v.twdSpent) + '）× ' + v.rate100;
-        if (v.twdRemainderExchanged > 0) detail += '＋剩 NT$' + fmtInt(v.twdRemainderExchanged) + ' 直接換';
-        if (v.twdLeft >= 1) detail += '・NT$' + fmtInt(v.twdLeft) + ' 未換';
-      } else if (v.reason === 'not-enough') {
-        detail = '金額不足 1 張 US$100（約需 NT$' + fmtInt(v.costPerBill) + '）';
-      } else if (v.reason === 'no-bot') {
-        detail = '臺灣銀行暫無資料';
-      } else {
-        detail = '暫無資料';
-      }
-      options.push({
-        key: shop.key, who: shop.name, how: '經台銀換美金', place: shop.place,
-        thb: v.ok ? v.thb : null, detail: detail
+      routesFor(data.sources[shop.key]).forEach(function (r) {
+        options.push({ key: shop.key, who: shop.name, place: shop.place, how: r.how, thb: r.thb, detail: r.detail, warn: r.warn });
       });
     });
     return options;
   }
 
-  function usdOptions(counts) {
-    return SHOPS.map(function (shop) {
-      var s = data.sources[shop.key];
-      var ok = hasRate(s);
-      var r = ok ? C.usdBillsToThb(counts, C.usdTiersOf(s)) : null;
-      if (!r || r.usdCounted === 0) {
-        return { key: shop.key, who: shop.name, how: '直接換美金', place: shop.place, thb: null,
-          detail: ok ? '沒有對應面額的匯率資料' : '暫無資料' };
-      }
-      return {
-        key: shop.key, who: shop.name, how: '直接換美金', place: shop.place,
-        thb: r.thb,
-        detail: r.lines.map(function (l) { return '$' + l.bill + '×' + l.count + ' @' + l.rate; }).join('、'),
-        warn: r.usdMissing > 0
-          ? 'US$' + fmtInt(r.usdMissing) + '（' + r.missingBills.map(function (b) { return b + ' 元'; }).join('、') + '鈔）沒有面額匯率，未計入'
-          : null
-      };
+  // 附近分店用：該分店自己的匯率在目前輸入下最好的換法；沒有分店匯率就是 null (不借用其他分店的匯率)
+  function branchRateOf(b) {
+    return data && data.branchRates && b.rateKey ? data.branchRates[b.rateKey] || null : null;
+  }
+  function branchEstimate(b) {
+    var src = branchRateOf(b);
+    if (!hasRate(src)) return null;
+    var best = null;
+    routesFor(src).forEach(function (r) {
+      if (r.thb != null && (!best || r.thb > best.thb)) best = r;
     });
+    return best;
   }
 
   var INPUT_MSG = {
@@ -550,13 +573,13 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     store.set(cur === 'TWD' ? 'thb-amount' : 'thb-amount-usd', raw);
 
     var parsed = C.parseAmount(raw);
-    var options = [];
     var message = null;
+    state.input = null;
 
     if (!parsed.ok) {
       message = INPUT_MSG[parsed.error](cur);
     } else if (cur === 'TWD') {
-      options = twdOptions(parsed.value);
+      state.input = { cur: 'TWD', twd: parsed.value };
     } else {
       var usd = Math.floor(parsed.value);
       if (!state.usdCustom || C.sumBills(state.usdCounts) !== usd) {
@@ -568,11 +591,12 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
       if (usd < 1) {
         message = '未滿 US$1 無法兌換（兌換所不收美金硬幣）';
       } else {
-        options = usdOptions(state.usdCounts);
+        state.input = { cur: 'USD', counts: state.usdCounts };
         if (parsed.value !== usd) message = '美分零頭 US$' + (parsed.value - usd).toFixed(2) + ' 不計';
       }
     }
 
+    var options = rankingOptions();
     var valid = options.filter(function (o) { return o.thb != null; });
     valid.sort(function (a, b) { return b.thb - a.thb; });
     var na = options.filter(function (o) { return o.thb == null; });
@@ -601,12 +625,6 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
       return '<li class="rank na"><span class="pos">–</span><span class="who"><b>' + esc(o.who) + '</b>・' + esc(o.how) +
         '<small>' + esc(o.detail) + '</small></span><span class="amt">—</span></li>';
     })).join('');
-
-    // 每家兌換所的最佳方案，給附近分店使用
-    state.shopBest = {};
-    valid.forEach(function (o) {
-      if (!state.shopBest[o.key]) state.shopBest[o.key] = { thb: o.thb, how: o.how };
-    });
 
     // 快速金額按鈕的選取狀態
     Array.prototype.forEach.call($('chips').children, function (btn) {
@@ -695,10 +713,11 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     var items = branches
       .filter(function (b) { return area === 'all' || b.city === area; })
       .map(function (b) {
-        var est = state.shopBest[b.rateSource] || null;
+        var est = branchEstimate(b);
         var fare = state.fares[b.id] || 0;
         return {
           b: b,
+          src: branchRateOf(b),
           dist: pos ? C.haversineKm(pos.lat, pos.lng, b.latitude, b.longitude) : null,
           est: est,
           fare: fare,
@@ -739,20 +758,33 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         setGeoStatus('已定位' + acc + '。這個地區沒有已收錄的分店，請改選其他地區。', 'warn');
       }
     } else {
-      setGeoStatus('尚未定位。下方列出' + (area === 'all' ? '所有' : esc(area) + '的') + '已收錄分店。');
+      setGeoStatus('尚未定位。下方依預估可換得泰銖列出' + (area === 'all' ? '' : esc(area) + '的') + '已收錄分店（共 ' + shown.length + ' 家）。');
     }
 
     // 與最近分店的預估差額 (距離 vs 換匯效益)
     var nearestShown = pos && shown.length > 1
       ? shown.slice().sort(function (x, y) { return x.dist - y.dist; })[0] : null;
 
-    $('branches').innerHTML = shown.map(function (it) {
+    var LIMIT = 10;
+    var visible = state.showAll ? shown : shown.slice(0, LIMIT);
+    var more = shown.length - visible.length;
+
+    $('branches').innerHTML = visible.map(function (it) {
       var b = it.b;
-      var shop = shopByKey(b.rateSource) || { logo: '•' };
-      var src = data && data.sources[b.rateSource];
-      var estHtml = it.est
-        ? '<span class="num">' + fmtTHB(it.est.thb) + '</span>（' + esc(it.est.how) + '）' + (src && src.stale ? '・<span class="unknown">匯率為沿用資料</span>' : '')
-        : '<span class="unknown">' + (data ? '請先在上方輸入金額' : '匯率載入中') + '</span>';
+      var src = it.src;
+      var estHtml;
+      if (it.est) {
+        estHtml = '<span class="num">' + fmtTHB(it.est.thb) + '</span>（' + esc(it.est.how) + '）' +
+          (src.stale ? '・<span class="unknown">沿用 ' + esc(twTime(src.lastSuccessAt)) + ' 的匯率</span>' : '');
+      } else if (!data) {
+        estHtml = '<span class="unknown">匯率載入中</span>';
+      } else if (!state.input) {
+        estHtml = '<span class="unknown">請先在上方輸入金額</span>';
+      } else if (!hasRate(src)) {
+        estHtml = '<span class="unknown">此分店匯率暫無資料</span>';
+      } else {
+        estHtml = '<span class="unknown">此分店沒有對應的匯率</span>';
+      }
       var compare = '';
       if (nearestShown && it !== nearestShown && it.net != null && nearestShown.net != null) {
         var diff = it.net - nearestShown.net;
@@ -765,16 +797,16 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
           (it.fare > 0 ? ' → 扣除後 <span class="num">' + fmtTHB(it.net) + '</span>' : '') + '</dd></div>'
         : '';
       return '<li class="branch">' +
-        '<div class="branch-head"><span class="logo">' + esc(shop.logo) + '</span>' +
-          '<div><b>' + esc(b.brand) + '・' + esc(b.branchName) + '</b><small>' + esc(b.city) + '・' + esc(b.area) + '</small></div>' +
+        '<div class="branch-head"><span class="logo">' + esc(BRAND_LOGO[b.brand] || '•') + '</span>' +
+          '<div><b>' + esc(b.brand) + '・' + esc(b.branchName) + '</b><small>' + esc([b.city, b.area !== b.branchName ? b.area : null].filter(Boolean).join('・') || '地區未分類') + '</small></div>' +
           (it.dist != null ? '<span class="dist num">' + fmtDist(it.dist) + '<small>非路線距離</small></span>' : '') +
         '</div>' +
         '<dl class="branch-info">' +
           '<div><dt>預估可換</dt><dd>' + estHtml + '</dd></div>' +
           fareHtml +
           compare +
-          '<div><dt>兌換貨幣</dt><dd>' + esc((b.supportedCurrencies || []).join('、') || '未確認') + '</dd></div>' +
-          '<div><dt>匯率範圍</dt><dd>' + esc(b.rateScopeNote || '未確認') + '</dd></div>' +
+          '<div><dt>兌換貨幣</dt><dd>' + esc(currenciesOf(b, src)) + '</dd></div>' +
+          '<div><dt>匯率</dt><dd>' + esc(b.rateScopeNote || '未確認') + rateTimeHtml(src) + '</dd></div>' +
           '<div><dt>地址</dt><dd>' + (b.address ? esc(b.address) : '<span class="unknown">地址未查證，請以地圖為準</span>') + '</dd></div>' +
           (b.phone ? '<div><dt>電話</dt><dd class="num">' + esc(b.phone) + '</dd></div>' : '') +
           '<div><dt>營業時間</dt><dd>' + hoursHtml(b, it.open) + '</dd></div>' +
@@ -782,10 +814,34 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
         '</dl>' +
         '<div class="branch-actions">' +
           '<a class="btn" href="' + esc(C.directionsUrl(b.latitude, b.longitude)) + '" target="_blank" rel="noopener">Google Maps 導航</a>' +
-          (b.googleMapsUrl ? '<a href="' + esc(b.googleMapsUrl) + '" target="_blank" rel="noopener">查看地點</a>' : '') +
+          '<a href="' + esc(b.googleMapsUrl || C.placeUrl(b.latitude, b.longitude)) + '" target="_blank" rel="noopener">查看地點</a>' +
         '</div>' +
       '</li>';
-    }).join('');
+    }).join('') + (more > 0
+      ? '<li><button type="button" class="btn ghost" id="show-all">顯示其餘 ' + more + ' 家</button></li>'
+      : '');
+  }
+
+  var BRAND_LOGO = { 'Super Rich': 'SR', 'Happy Rich': 'HR', 'T.T. Exchange': 'TT' };
+
+  // 可兌換貨幣：以這家分店實際有的匯率為準，沒有匯率資料時才用分店資料的欄位
+  function currenciesOf(b, src) {
+    if (hasRate(src)) {
+      var list = [];
+      if (src.twdBuy > 0) list.push('TWD');
+      if (src.usdBuy > 0 || C.usdTiersOf(src).length) list.push('USD');
+      return list.length ? list.join('、') : '沒有 TWD／USD 匯率';
+    }
+    return (b.supportedCurrencies || []).join('、') || '未確認';
+  }
+
+  // 匯率時間：有公告時間就用公告時間 (泰國時間)，沒有就顯示抓取時間 (台灣時間)
+  function rateTimeHtml(src) {
+    if (!hasRate(src)) return '';
+    var text = src.updatedAt
+      ? '公告 ' + shortLocal(src.updatedAt) + '（泰國時間）'
+      : '抓取 ' + twTime(src.stale ? src.lastSuccessAt : src.fetchedAt) + '（台灣時間）';
+    return '<br><small class="num">' + esc(text) + '</small>';
   }
 
   var DAYS = { monday: '一', tuesday: '二', wednesday: '三', thursday: '四', friday: '五', saturday: '六', sunday: '日' };
@@ -931,7 +987,14 @@ footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 2
     $('sort').value = 'thb';
     renderNearby();
   });
-  ['radius', 'sort', 'area'].forEach(function (id) { $(id).addEventListener('change', renderNearby); });
+  ['radius', 'sort', 'area'].forEach(function (id) {
+    $(id).addEventListener('change', function () { state.showAll = false; renderNearby(); });
+  });
+  $('branches').addEventListener('click', function (e) {
+    if (!e.target.closest('#show-all')) return;
+    state.showAll = true;
+    renderNearby();
+  });
   // 交通費在離開欄位 (change) 時才重新排序，避免輸入到一半清單跳動
   $('branches').addEventListener('change', function (e) {
     var input = e.target.closest('input[data-fare]');

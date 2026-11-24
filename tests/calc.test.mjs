@@ -204,7 +204,11 @@ test('directionsUrl：Google Maps 導航網址只含目的地座標', () => {
 
 // ---------------------------------------------------------------- 分店資料
 
-test('exchange-shops.json：id 唯一、座標有效、對應到 rates.json 的來源', async () => {
+test('placeUrl：沒有地點連結時用座標開啟地圖', () => {
+  assert.equal(C.placeUrl(12.95, 100.88), 'https://www.google.com/maps/search/?api=1&query=12.95%2C100.88');
+});
+
+test('exchange-shops.json：id 唯一、座標有效、每家分店都有自己的匯率鍵', async () => {
   const { readFile } = await import('node:fs/promises');
   const shops = JSON.parse(await readFile(new URL('../site/data/exchange-shops.json', import.meta.url), 'utf8'));
   const rates = JSON.parse(await readFile(new URL('../site/data/rates.json', import.meta.url), 'utf8'));
@@ -213,11 +217,17 @@ test('exchange-shops.json：id 唯一、座標有效、對應到 rates.json 的�
     assert.ok(b.id && !ids.has(b.id), `重複或缺少 id：${b.id}`);
     ids.add(b.id);
     assert.ok(C.isValidCoord(b.latitude, b.longitude), `${b.id} 座標無效`);
-    assert.ok(rates.sources[b.rateSource], `${b.id} 的 rateSource 不存在：${b.rateSource}`);
+    assert.ok(rates.branchRates?.[b.rateKey], `${b.id} 的 rateKey 在 rates.json 找不到：${b.rateKey}`);
+    if (b.address != null) assert.equal(typeof b.address, 'string');
     assert.ok(b.lastVerifiedAt, `${b.id} 缺少 lastVerifiedAt`);
     // 未查證的營業時間必須是 null，不可填猜測值
     assert.ok(b.openingHours === null || typeof b.openingHours === 'object');
+    for (const [day, v] of Object.entries(b.openingHours ?? {})) {
+      assert.ok(C.WEEKDAYS.includes(day), `${b.id} 營業時間的星期錯誤：${day}`);
+      assert.ok(v === 'closed' || C.parseHoursRange(v), `${b.id} ${day} 營業時間格式錯誤：${v}`);
+    }
   }
+  assert.ok(shops.branches.length > 3, '分店數量應包含官方 API 匯入的分店');
 });
 
 // ---------------------------------------------------------------- 營業時間 & 資料新鮮度
